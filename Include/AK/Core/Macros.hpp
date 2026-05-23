@@ -15,15 +15,15 @@
 #define GameAK_ALIGN(n) alignas(n)
 #define GameAK_ALIGN_CACHE alignas(GameAK_CACHE_LINE_SIZE)
 
-#if defined(GAMEGameAK_COMPILER_MSVC)
+#if defined(GAMEAK_COMPILER_MSVC)
 #define GameAK_FORCE_INLINE __forceinline
 #define GameAK_NO_INLINE __declspec(noinline)
-#elif defined(GAMEGameAK_COMPILER_CLANG) || defined(GAMEGameAK_COMPILER_GCC)
+#elif defined(GAMEAK_COMPILER_CLANG) || defined(GAMEAK_COMPILER_GCC)
 #define GameAK_FORCE_INLINE __attribute__((always_inline)) inline
 #define GameAK_NO_INLINE __attribute__((noinline))
 #endif
 
-#if defined(GAMEGameAK_COMPILER_CLANG) || defined(GAMEGameAK_COMPILER_GCC)
+#if defined(GAMEAK_COMPILER_CLANG) || defined(GAMEAK_COMPILER_GCC)
 #define GameAK_LIKELY(x) __builtin_expect(!!(x), 1)
 #define GameAK_UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
@@ -31,8 +31,18 @@
 #define GameAK_UNLIKELY(x) (x)
 #endif
 
-#if defined(GAMEGameAK_ARCH_X86_64)
+#if defined(GAMEAK_ARCH_X86_64)
 #define GameAK_ALIGN_SIMD alignas(32)
-#elif defined(GAMEGameAK_ARCH_ARM64)
+#elif defined(GAMEAK_ARCH_ARM64)
 #define GameAK_ALIGN_SIMD alignas(16)
+#endif
+
+#if defined(GAMEAK_COMPILER_MSVC)
+#define AK_DEBUG_BREAK() __debugbreak()
+#elif defined(GAMEAK_COMPILER_CLANG) || defined(GAMEAK_COMPILER_GCC)
+#if defined(GAMEAK_ARCH_X86_64)
+#define AK_DEBUG_BREAK() __asm__ volatile("int $0x03")
+#elif defined(GAMEAK_ARCH_ARM64)
+#define AK_DEBUG_BREAK() __asm__ volatile("brk #0")
+#endif
 #endif

@@ -7,9 +7,12 @@
 
 #pragma once
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-/// Defined when a supported 64-bit architecture (x86-64 or AArch64) is detected.
+#if defined(__x86_64__) || defined(_M_X64)
 #define GAMEAK_ARCH_64_BIT
+#define GAMEAK_ARCH_X86_64
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define GAMEAK_ARCH_64_BIT
+#define GAMEAK_ARCH_ARM64
 #else
 #error "GameAK: Unsupported architecture. GameAK requires a 64-bit platform."
 #endif

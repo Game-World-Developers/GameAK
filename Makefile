@@ -14,20 +14,27 @@ TEST_SRCS  = $(shell find Tests -name "Test*.cpp")
 TEST_OBJS  = $(patsubst Tests/%.cpp,$(OBJ_DIR)/%.o,$(TEST_SRCS))
 TEST_BINS  = $(patsubst Tests/%.cpp,$(TEST_DIR)/%,$(TEST_SRCS))
 
+SRC_SRCS   = $(shell find Src -name "*.cpp")
+SRC_OBJS   = $(patsubst Src/%.cpp,$(OBJ_DIR)/Src/%.o,$(SRC_SRCS))
+
 $(OBJ_DIR)/%.o: Tests/%.cpp
 	@mkdir -p $(@D)
 	$(TEST_CXX) $(TEST_CXXFLAGS) -c $< -o $@
 
-$(TEST_DIR)/%: $(OBJ_DIR)/%.o
+$(OBJ_DIR)/Src/%.o: Src/%.cpp
 	@mkdir -p $(@D)
-	$(TEST_CXX) $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(TEST_DIR)/%: $(OBJ_DIR)/%.o $(SRC_OBJS)
+	@mkdir -p $(@D)
+	$(TEST_CXX) $^ -o $@
 
 tests: $(TEST_BINS)
 	@for bin in $(TEST_BINS); do \
 		./$$bin; \
 	done
 
-.SECONDARY: $(TEST_OBJS)
+.SECONDARY: $(TEST_OBJS) $(SRC_OBJS)
 
 clean:
 	rm -rf $(BUILD_DIR)

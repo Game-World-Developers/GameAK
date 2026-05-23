@@ -4,14 +4,14 @@
 
 namespace AK {
 
-template <typename T> using RemoveRef = std::remove_reference<T>;
-template <typename T> using RemoveConst = std::remove_const<T>;
-template <typename T> using RemoveCV = std::remove_cv<T>;
+template <typename T> using RemoveRef = std::remove_reference_t<T>;
+template <typename T> using RemoveConst = std::remove_const_t<T>;
+template <typename T> using RemoveCV = std::remove_cv_t<T>;
 template <typename T>
-using RemoveCVRef = std::remove_cv_t<typename std::remove_reference_t<T>>;
-template <typename T> using AddConst = std::add_const<T>;
-template <typename T> using AddLValueRef = std::add_lvalue_reference<T>;
-template <typename T> using AddRValueRef = std::add_rvalue_reference<T>;
+using RemoveCVRef = std::remove_cv_t<std::remove_reference_t<T>>;
+template <typename T> using AddConst = std::add_const_t<T>;
+template <typename T> using AddLValueRef = std::add_lvalue_reference_t<T>;
+template <typename T> using AddRValueRef = std::add_rvalue_reference_t<T>;
 
 template <typename T> inline constexpr bool IsIntegral = std::is_integral_v<T>;
 
@@ -26,7 +26,7 @@ inline constexpr bool IsReference = std::is_reference_v<T>;
 template <typename T>
 inline constexpr bool IsTriviallyCopyable = std::is_trivially_copyable_v<T>;
 
-template <typename T> using Decay = std::decay<T>;
+template <typename T> using Decay = std::decay_t<T>;
 
 template <bool B, typename T = void> using EnableIf = std::enable_if_t<B, T>;
 

@@ -23,9 +23,9 @@
 namespace GameAK {
 
 /// Signed 8-bit integer.
-using i8  = std::int8_t;
+using i8 = std::int8_t;
 /// Unsigned 8-bit integer.
-using u8  = std::uint8_t;
+using u8 = std::uint8_t;
 /// Signed 16-bit integer.
 using i16 = std::int16_t;
 /// Unsigned 16-bit integer.

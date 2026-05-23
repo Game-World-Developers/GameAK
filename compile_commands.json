@@ -1,0 +1,72 @@
+[
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wno-macro-redefined",
+   "Tests/AK/Core/TestNumericLimits.cpp",
+   "-o",
+   "Tests/AK/Core/TestNumericLimits.test"
+  ],
+  "file": "Tests/AK/Core/TestNumericLimits.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wno-macro-redefined",
+   "Tests/AK/Core/TestTemplateMeta.cpp",
+   "-o",
+   "Tests/AK/Core/TestTemplateMeta.test"
+  ],
+  "file": "Tests/AK/Core/TestTemplateMeta.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wno-macro-redefined",
+   "Tests/AK/Core/TestTypeProperties.cpp",
+   "-o",
+   "Tests/AK/Core/TestTypeProperties.test"
+  ],
+  "file": "Tests/AK/Core/TestTypeProperties.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wno-macro-redefined",
+   "Tests/AK/Core/TestTypeTransformations.cpp",
+   "-o",
+   "Tests/AK/Core/TestTypeTransformations.test"
+  ],
+  "file": "Tests/AK/Core/TestTypeTransformations.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wno-macro-redefined",
+   "Tests/AK/Core/TestTypes.cpp",
+   "-o",
+   "Tests/AK/Core/TestTypes.test"
+  ],
+  "file": "Tests/AK/Core/TestTypes.cpp"
+ }
+]

@@ -1,7 +1,7 @@
 .PHONY: all tests clean
 
 CXX = clang++
-CXXFLAGS = -std=c++20 -IInclude -IThirdParty
+CXXFLAGS = -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti
 
 TEST_CXX = clang++
 TEST_CXXFLAGS = -std=c++20 -IInclude -IThirdParty -Wno-macro-redefined -fno-exceptions -fno-rtti -fsanitize=address -fsanitize=undefined -fsanitize=leak

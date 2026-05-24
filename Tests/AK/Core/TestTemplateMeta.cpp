@@ -58,13 +58,15 @@ int main() {
     it("should have correct TrueType and FalseType", {
       static_assert(GameAK::TrueType::value);
       static_assert(!GameAK::FalseType::value);
-      expect(true).toBeTruthy();
+      expect(GameAK::TrueType::value).toBeTruthy();
+      expect(GameAK::FalseType::value).toBeFalsy();
     });
 
     it("should correctly use TypeIdentity", {
       static_assert(std::is_same_v<GameAK::TypeIdentity<int>::type, int>);
       static_assert(std::is_same_v<GameAK::TypeIdentity<float>::type, float>);
-      expect(true).toBeTruthy();
+      expect((std::is_same_v<GameAK::TypeIdentity<int>::type, int>)).toBeTruthy();
+      expect((std::is_same_v<GameAK::TypeIdentity<float>::type, float>)).toBeTruthy();
     });
 
     it("should correctly select types with Conditional", {
@@ -72,21 +74,28 @@ int main() {
       static_assert(std::is_same_v<GameAK::Conditional<false, int, float>::type, float>);
       static_assert(std::is_same_v<GameAK::ConditionalT<true, int, float>, int>);
       static_assert(std::is_same_v<GameAK::ConditionalT<false, int, float>, float>);
-      expect(true).toBeTruthy();
+      expect((std::is_same_v<GameAK::Conditional<true, int, float>::type, int>)).toBeTruthy();
+      expect((std::is_same_v<GameAK::Conditional<false, int, float>::type, float>)).toBeTruthy();
+      expect((std::is_same_v<GameAK::ConditionalT<true, int, float>, int>)).toBeTruthy();
+      expect((std::is_same_v<GameAK::ConditionalT<false, int, float>, float>)).toBeTruthy();
     });
 
     it("should correctly check type equality with IsSame", {
       static_assert(GameAK::IsSame<int, int>);
       static_assert(!GameAK::IsSame<int, float>);
       static_assert(GameAK::IsSame<void, void>);
-      expect(true).toBeTruthy();
+      expect((GameAK::IsSame<int, int>)).toBeTruthy();
+      expect((GameAK::IsSame<int, float>)).toBeFalsy();
+      expect((GameAK::IsSame<void, void>)).toBeTruthy();
     });
 
     it("should correctly check base-of relationships", {
       static_assert(GameAK::IsBaseOf<Base, Derived>);
       static_assert(GameAK::IsBaseOf<Base, Base>);
       static_assert(!GameAK::IsBaseOf<Derived, Base>);
-      expect(true).toBeTruthy();
+      expect((GameAK::IsBaseOf<Base, Derived>)).toBeTruthy();
+      expect((GameAK::IsBaseOf<Base, Base>)).toBeTruthy();
+      expect((GameAK::IsBaseOf<Derived, Base>)).toBeFalsy();
     });
 
     it("should correctly check convertibility", {
@@ -94,7 +103,10 @@ int main() {
       static_assert(GameAK::IsConvertible<Derived, Base>);
       static_assert(!GameAK::IsConvertible<Base, Derived>);
       static_assert(GameAK::IsConvertible<float, double>);
-      expect(true).toBeTruthy();
+      expect((GameAK::IsConvertible<int, float>)).toBeTruthy();
+      expect((GameAK::IsConvertible<Derived, Base>)).toBeTruthy();
+      expect((GameAK::IsConvertible<Base, Derived>)).toBeFalsy();
+      expect((GameAK::IsConvertible<float, double>)).toBeTruthy();
     });
 
     it("should correctly swap two values", {

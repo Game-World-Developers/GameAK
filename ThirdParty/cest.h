@@ -650,7 +650,6 @@ static inline void _cest_assert_impl(cest_value_t expected, cest_match_fn match,
     int diff_pos = -1;
     int passed = match(_cest_ctx.actual, expected, &diff_pos);
     if (passed) {
-        printf("  " CEST_CLR_GREEN "✓" CEST_CLR_RESET " %s %s %s\n", _cest_ctx.actual_expr, match_name, expected_expr);
         _cest_global_stats.passed++;
     } else {
         printf("  " CEST_CLR_RED "✕ %s failed" CEST_CLR_RESET "\n", _cest_ctx.actual_expr);
@@ -864,7 +863,6 @@ static inline void b_toBeUndefined(void) { _cest_assert_impl(cest_bool(true), ma
 static inline void b_toBeCloseTo(double val, double precision) {
     double diff = _CEST_ABS(_cest_ctx.actual.as.d - val);
     if (diff < precision) {
-        printf("  " CEST_CLR_GREEN "✓" CEST_CLR_RESET " %s to be close to %g (precision %g)\n", _cest_ctx.actual_expr, val, precision);
         _cest_global_stats.passed++;
     } else {
         printf("  " CEST_CLR_RED "✕ %s to be close to" CEST_CLR_RESET "\n", _cest_ctx.actual_expr);
@@ -879,7 +877,6 @@ static inline void b_toBeCloseTo(double val, double precision) {
 static inline void b_toBeInRange(cest_value_t min, cest_value_t max, const char* re) {
     int passed = match_in_range(_cest_ctx.actual, min, max, NULL);
     if (passed) {
-        printf("  " CEST_CLR_GREEN "✓" CEST_CLR_RESET " %s to be in range %s\n", _cest_ctx.actual_expr, re);
         _cest_global_stats.passed++;
     } else {
         printf("  " CEST_CLR_RED "✕ %s to be in range" CEST_CLR_RESET "\n", _cest_ctx.actual_expr);
@@ -1005,14 +1002,17 @@ static clock_t _cest_test_start_time __attribute__((unused)) = 0;
         printf("  " CEST_CLR_DIM "○ %s (filtered)" CEST_CLR_RESET "\n", name); \
         _cest_global_stats.skipped++; \
     } else { \
+        int _cest_before = _cest_global_stats.failed; \
         _cest_current_test_name = name; \
         _CEST_SIGNAL_SET_TEST(name); \
         _cest_test_start_time = clock(); \
-        printf("  %s\n", name); \
         fflush(stdout); \
         _CEST_RUN_BEFORE_EACH(); \
         CEST_FORK_TEST(__VA_ARGS__); \
         _CEST_RUN_AFTER_EACH(); \
+        if (_cest_global_stats.failed == _cest_before) { \
+            printf("  " CEST_CLR_GREEN "✓" CEST_CLR_RESET " %s\n", name); \
+        } \
         fflush(stdout); \
     } \
 } while (0)

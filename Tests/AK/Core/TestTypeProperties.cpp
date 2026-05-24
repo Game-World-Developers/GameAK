@@ -47,13 +47,15 @@ int main() {
     it("should correctly identify void types", {
       static_assert(GameAK::IsVoid<void>);
       static_assert(!GameAK::IsVoid<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsVoid<void>).toBeTruthy();
+      expect(GameAK::IsVoid<int>).toBeFalsy();
     });
 
     it("should correctly identify nullptr types", {
       static_assert(GameAK::IsNullptr<decltype(nullptr)>);
       static_assert(!GameAK::IsNullptr<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsNullptr<decltype(nullptr)>).toBeTruthy();
+      expect(GameAK::IsNullptr<int>).toBeFalsy();
     });
 
     it("should correctly identify arithmetic types", {
@@ -61,7 +63,10 @@ int main() {
       static_assert(GameAK::IsArithmetic<float>);
       static_assert(GameAK::IsArithmetic<char>);
       static_assert(!GameAK::IsArithmetic<int *>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsArithmetic<int>).toBeTruthy();
+      expect(GameAK::IsArithmetic<float>).toBeTruthy();
+      expect(GameAK::IsArithmetic<char>).toBeTruthy();
+      expect(GameAK::IsArithmetic<int *>).toBeFalsy();
     });
 
     it("should correctly identify lvalue and rvalue references", {
@@ -71,32 +76,42 @@ int main() {
       static_assert(!GameAK::IsRValueReference<int &>);
       static_assert(!GameAK::IsLValueReference<int>);
       static_assert(!GameAK::IsRValueReference<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsLValueReference<int &>).toBeTruthy();
+      expect(GameAK::IsLValueReference<int &&>).toBeFalsy();
+      expect(GameAK::IsRValueReference<int &&>).toBeTruthy();
+      expect(GameAK::IsRValueReference<int &>).toBeFalsy();
+      expect(GameAK::IsLValueReference<int>).toBeFalsy();
+      expect(GameAK::IsRValueReference<int>).toBeFalsy();
     });
 
     it("should correctly identify enum types", {
       static_assert(GameAK::IsEnum<TestEnum>);
       static_assert(!GameAK::IsEnum<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsEnum<TestEnum>).toBeTruthy();
+      expect(GameAK::IsEnum<int>).toBeFalsy();
     });
 
     it("should correctly identify union types", {
       static_assert(GameAK::IsUnion<TestUnion>);
       static_assert(!GameAK::IsUnion<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsUnion<TestUnion>).toBeTruthy();
+      expect(GameAK::IsUnion<int>).toBeFalsy();
     });
 
     it("should correctly identify class types", {
       static_assert(GameAK::IsClass<TestClass>);
       static_assert(!GameAK::IsClass<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsClass<TestClass>).toBeTruthy();
+      expect(GameAK::IsClass<int>).toBeFalsy();
     });
 
     it("should correctly identify array types", {
       static_assert(GameAK::IsArray<int[10]>);
       static_assert(GameAK::IsArray<char[5]>);
       static_assert(!GameAK::IsArray<int *>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsArray<int[10]>).toBeTruthy();
+      expect(GameAK::IsArray<char[5]>).toBeTruthy();
+      expect(GameAK::IsArray<int *>).toBeFalsy();
     });
 
     it("should correctly identify const-qualified types", {
@@ -104,13 +119,17 @@ int main() {
       static_assert(GameAK::IsConst<const volatile int>);
       static_assert(!GameAK::IsConst<int>);
       static_assert(!GameAK::IsConst<int &>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsConst<const int>).toBeTruthy();
+      expect(GameAK::IsConst<const volatile int>).toBeTruthy();
+      expect(GameAK::IsConst<int>).toBeFalsy();
+      expect(GameAK::IsConst<int &>).toBeFalsy();
     });
 
     it("should correctly identify trivially destructible types", {
       static_assert(GameAK::IsTriviallyDestructible<int>);
       static_assert(GameAK::IsTriviallyDestructible<float>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsTriviallyDestructible<int>).toBeTruthy();
+      expect(GameAK::IsTriviallyDestructible<float>).toBeTruthy();
     });
 
     it("should correctly identify trivially default constructible types", {
@@ -119,48 +138,50 @@ int main() {
         int x;
       };
       static_assert(GameAK::IsTriviallyDefaultConstructible<Trivial>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsTriviallyDefaultConstructible<int>).toBeTruthy();
+      expect(GameAK::IsTriviallyDefaultConstructible<Trivial>).toBeTruthy();
     });
 
     it("should correctly identify trivially copy constructible types", {
       static_assert(GameAK::IsTriviallyCopyConstructible<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsTriviallyCopyConstructible<int>).toBeTruthy();
     });
 
     it("should correctly identify trivially move constructible types", {
       static_assert(GameAK::IsTriviallyMoveConstructible<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsTriviallyMoveConstructible<int>).toBeTruthy();
     });
 
     it("should correctly identify trivially relocatable types", {
       static_assert(GameAK::IsTriviallyRelocatable<int>);
       static_assert(GameAK::IsTriviallyRelocatable<float>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsTriviallyRelocatable<int>).toBeTruthy();
+      expect(GameAK::IsTriviallyRelocatable<float>).toBeTruthy();
     });
 
     it("should correctly identify default constructible types", {
       static_assert(GameAK::IsDefaultConstructible<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsDefaultConstructible<int>).toBeTruthy();
     });
 
     it("should correctly identify move constructible types", {
       static_assert(GameAK::IsMoveConstructible<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsMoveConstructible<int>).toBeTruthy();
     });
 
     it("should correctly identify copy constructible types", {
       static_assert(GameAK::IsCopyConstructible<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsCopyConstructible<int>).toBeTruthy();
     });
 
     it("should correctly identify move assignable types", {
       static_assert(GameAK::IsMoveAssignable<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsMoveAssignable<int>).toBeTruthy();
     });
 
     it("should correctly identify copy assignable types", {
       static_assert(GameAK::IsCopyAssignable<int>);
-      expect(true).toBeTruthy();
+      expect(GameAK::IsCopyAssignable<int>).toBeTruthy();
     });
   });
 

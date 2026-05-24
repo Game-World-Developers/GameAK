@@ -236,23 +236,22 @@ int main() {
       GameAK::byte buffer[128];
       GameAK::PoolAllocator pool(buffer, sizeof(buffer), 32, 8);
 
+      int ok = 0;
       for (int cycle = 0; cycle < 1000; ++cycle) {
         void *b1 = pool.acquire();
         void *b2 = pool.acquire();
         void *b3 = pool.acquire();
         void *b4 = pool.acquire();
-        expect(b1 != nullptr).toBeTruthy();
-        expect(b2 != nullptr).toBeTruthy();
-        expect(b3 != nullptr).toBeTruthy();
-        expect(b4 != nullptr).toBeTruthy();
-        expect(pool.acquire() == nullptr).toBeTruthy();
+        if (b1 && b2 && b3 && b4) ok++;
+        if (pool.acquire() == nullptr) ok++;
 
         pool.release(b1);
         pool.release(b2);
         pool.release(b3);
         pool.release(b4);
-        expect(pool.is_empty()).toBeTruthy();
+        if (pool.is_empty()) ok++;
       }
+      expect(ok).toBe(3000);
     });
   });
 

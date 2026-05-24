@@ -4,7 +4,7 @@ CXX = clang++
 CXXFLAGS = -std=c++20 -IInclude -IThirdParty
 
 TEST_CXX = clang++
-TEST_CXXFLAGS = -std=c++20 -IInclude -IThirdParty -Wno-macro-redefined
+TEST_CXXFLAGS = -std=c++20 -IInclude -IThirdParty -Wno-macro-redefined -fno-exceptions -fno-rtti -fsanitize=address -fsanitize=undefined -fsanitize=leak
 
 BUILD_DIR  = build
 OBJ_DIR    = build/obj
@@ -27,7 +27,7 @@ $(OBJ_DIR)/Src/%.o: Src/%.cpp
 
 $(TEST_DIR)/%: $(OBJ_DIR)/%.o $(SRC_OBJS)
 	@mkdir -p $(@D)
-	$(TEST_CXX) $^ -o $@
+	$(TEST_CXX) $(TEST_CXXFLAGS) $^ -o $@
 
 tests: $(TEST_BINS)
 	@for bin in $(TEST_BINS); do \

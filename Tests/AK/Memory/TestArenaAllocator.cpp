@@ -1,16 +1,14 @@
 #include <AK/Memory/ArenaAllocator.hpp>
 #include <cest.h>
+#include <csetjmp>
 #include <limits>
 #include <signal.h>
-#include <csetjmp>
 
 namespace {
 
 static sigjmp_buf trap_jmp_buf;
 
-extern "C" void trap_handler(int) {
-  siglongjmp(trap_jmp_buf, 1);
-}
+extern "C" void trap_handler(int) { siglongjmp(trap_jmp_buf, 1); }
 
 struct SavedSigaction {
   struct sigaction old_act;
@@ -139,8 +137,6 @@ int main() {
       expect(arena.used()).toBe(0UL);
     });
 
-    // --- CRITICAL BUG TESTS (T2, T3, T5, T6, T9 from TODO.md) ---
-
     it("[Critical Bug: ArenaAllocator::allocate com size = USIZE_MAX]", {
       GameAK::byte buffer[1024];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
@@ -154,16 +150,18 @@ int main() {
       expect(arena.used()).toBe(8UL);
     });
 
-    it("[Critical Bug: ArenaAllocator::allocate<int>(USIZE_MAX / sizeof(int) + 1)]", {
-      GameAK::byte buffer[1024];
-      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+    it("[Critical Bug: ArenaAllocator::allocate<int>(USIZE_MAX / sizeof(int) + "
+       "1)]",
+       {
+         GameAK::byte buffer[1024];
+         GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
 
-      GameAK::usize max = std::numeric_limits<GameAK::usize>::max();
-      GameAK::usize over = max / sizeof(int) + 1;
-      int *p = arena.allocate<int>(over);
-      expect(p == nullptr).toBeTruthy();
-      expect(arena.used()).toBe(0UL);
-    });
+         GameAK::usize max = std::numeric_limits<GameAK::usize>::max();
+         GameAK::usize over = max / sizeof(int) + 1;
+         int *p = arena.allocate<int>(over);
+         expect(p == nullptr).toBeTruthy();
+         expect(arena.used()).toBe(0UL);
+       });
 
     it("[Critical Bug: ArenaAllocator: alignment non-power-of-2]", {
       GameAK::byte buffer[1024];

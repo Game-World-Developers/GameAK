@@ -6,9 +6,8 @@ GAMEAK_NO_INLINE int no_inline_func() { return 99; }
 
 int main() {
   describe("GAMEAK::Macros", {
-    it("should define CACHE_LINE_SIZE as 64", {
-      expect(GAMEAK_CACHE_LINE_SIZE).toBe(64);
-    });
+    it("should define CACHE_LINE_SIZE as 64",
+       { expect(GAMEAK_CACHE_LINE_SIZE).toBe(64); });
 
     it("should align to specified boundary", {
       struct GAMEAK_ALIGN(32) Aligned {
@@ -24,13 +23,11 @@ int main() {
       expect((int)alignof(Aligned) >= GAMEAK_CACHE_LINE_SIZE).toBeTruthy();
     });
 
-    it("should force inline a function", {
-      expect(force_inline_func()).toBe(42);
-    });
+    it("should force inline a function",
+       { expect(force_inline_func()).toBe(42); });
 
-    it("should prevent function inlining", {
-      expect(no_inline_func()).toBe(99);
-    });
+    it("should prevent function inlining",
+       { expect(no_inline_func()).toBe(99); });
 
     it("should return the input from LIKELY", {
       expect(GAMEAK_LIKELY(1)).toBe(1);
@@ -53,9 +50,8 @@ int main() {
 #endif
     });
 
-    it("should compile DEBUG_BREAK without error", {
-      expect(true).toBeTruthy();
-    });
+    it("should compile DEBUG_BREAK without error",
+       { expect(true).toBeTruthy(); });
   });
 
   return cest_result();

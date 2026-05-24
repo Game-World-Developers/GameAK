@@ -1,16 +1,14 @@
 #include <AK/Memory/PoolAllocator.hpp>
 #include <cest.h>
+#include <csetjmp>
 #include <cstring>
 #include <signal.h>
-#include <csetjmp>
 
 namespace {
 
 static sigjmp_buf trap_jmp_buf;
 
-extern "C" void trap_handler(int) {
-  siglongjmp(trap_jmp_buf, 1);
-}
+extern "C" void trap_handler(int) { siglongjmp(trap_jmp_buf, 1); }
 
 struct PoolTracker {
   static int count;
@@ -96,7 +94,8 @@ int main() {
       PoolTracker::count = 0;
 
       GameAK::byte buffer[256];
-      GameAK::PoolAllocator pool(buffer, sizeof(buffer), sizeof(PoolTracker), alignof(PoolTracker));
+      GameAK::PoolAllocator pool(buffer, sizeof(buffer), sizeof(PoolTracker),
+                                 alignof(PoolTracker));
       auto *obj = pool.acquire<PoolTracker>();
       new (obj) PoolTracker();
       expect(PoolTracker::count).toBe(1);
@@ -177,27 +176,31 @@ int main() {
 
     // --- CRITICAL BUG TESTS (T1, T4, T7, T10 from TODO.md) ---
 
-    it("[Critical Bug: PoolAllocator::reset() corrompe memória quando m_block_count == 0]", {
-      SavedSigaction saved;
-      saved.install();
+    it("[Critical Bug: PoolAllocator::reset() corrupts the memory when"
+       "m_block_count == 0]",
+       {
+         SavedSigaction saved;
+         saved.install();
 
-      GameAK::byte buffer[16];
-      alignas(GameAK::PoolAllocator) GameAK::byte pool_storage[sizeof(GameAK::PoolAllocator)];
+         GameAK::byte buffer[16];
+         alignas(GameAK::PoolAllocator)
+             GameAK::byte pool_storage[sizeof(GameAK::PoolAllocator)];
 
-      if (sigsetjmp(trap_jmp_buf, 1) == 0) {
-        new (pool_storage) GameAK::PoolAllocator(buffer, sizeof(buffer), 32, 8);
-      }
+         if (sigsetjmp(trap_jmp_buf, 1) == 0) {
+           new (pool_storage)
+               GameAK::PoolAllocator(buffer, sizeof(buffer), 32, 8);
+         }
 
-      saved.restore();
+         saved.restore();
 
-      GameAK::PoolAllocator *pool =
-          reinterpret_cast<GameAK::PoolAllocator *>(pool_storage);
-      expect(pool->block_count()).toBe(0UL);
+         GameAK::PoolAllocator *pool =
+             reinterpret_cast<GameAK::PoolAllocator *>(pool_storage);
+         expect(pool->block_count()).toBe(0UL);
 
-      pool->reset();
-      expect(pool->block_count()).toBe(0UL);
-      expect(pool->free_count()).toBe(0UL);
-    });
+         pool->reset();
+         expect(pool->block_count()).toBe(0UL);
+         expect(pool->free_count()).toBe(0UL);
+       });
 
     it("[Critical Bug: PoolAllocator: double-release]", {
       GameAK::byte buffer[128];
@@ -222,7 +225,7 @@ int main() {
       expect(r1 == b1 || r2 == b1).toBeTruthy();
     });
 
-    it("[Critical Bug: PoolAllocator: release de ponteiro misaligned (meio do bloco)]", {
+    it("[Critical Bug: PoolAllocator: release of pointer misaligned]", {
       GameAK::byte buffer[256];
       GameAK::PoolAllocator pool(buffer, sizeof(buffer), 32, 8);
       void *block = pool.acquire();
@@ -232,27 +235,32 @@ int main() {
       expect(pool.owns(misaligned)).toBeFalsy();
     });
 
-    it("[Critical Bug: PoolAllocator: acquire-release-acquire-release cíclico (1000x)]", {
-      GameAK::byte buffer[128];
-      GameAK::PoolAllocator pool(buffer, sizeof(buffer), 32, 8);
+    it("[Critical Bug: PoolAllocator: acquire-release-acquire-release cíclico "
+       "(1000x)]",
+       {
+         GameAK::byte buffer[128];
+         GameAK::PoolAllocator pool(buffer, sizeof(buffer), 32, 8);
 
-      int ok = 0;
-      for (int cycle = 0; cycle < 1000; ++cycle) {
-        void *b1 = pool.acquire();
-        void *b2 = pool.acquire();
-        void *b3 = pool.acquire();
-        void *b4 = pool.acquire();
-        if (b1 && b2 && b3 && b4) ok++;
-        if (pool.acquire() == nullptr) ok++;
+         int ok = 0;
+         for (int cycle = 0; cycle < 1000; ++cycle) {
+           void *b1 = pool.acquire();
+           void *b2 = pool.acquire();
+           void *b3 = pool.acquire();
+           void *b4 = pool.acquire();
+           if (b1 && b2 && b3 && b4)
+             ok++;
+           if (pool.acquire() == nullptr)
+             ok++;
 
-        pool.release(b1);
-        pool.release(b2);
-        pool.release(b3);
-        pool.release(b4);
-        if (pool.is_empty()) ok++;
-      }
-      expect(ok).toBe(3000);
-    });
+           pool.release(b1);
+           pool.release(b2);
+           pool.release(b3);
+           pool.release(b4);
+           if (pool.is_empty())
+             ok++;
+         }
+         expect(ok).toBe(3000);
+       });
   });
 
   return cest_result();

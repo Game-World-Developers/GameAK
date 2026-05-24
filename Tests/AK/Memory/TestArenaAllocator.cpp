@@ -1,5 +1,30 @@
 #include <AK/Memory/ArenaAllocator.hpp>
 #include <cest.h>
+#include <limits>
+#include <signal.h>
+#include <csetjmp>
+
+namespace {
+
+static sigjmp_buf trap_jmp_buf;
+
+extern "C" void trap_handler(int) {
+  siglongjmp(trap_jmp_buf, 1);
+}
+
+struct SavedSigaction {
+  struct sigaction old_act;
+  void install() {
+    struct sigaction trap_act;
+    trap_act.sa_handler = trap_handler;
+    sigemptyset(&trap_act.sa_mask);
+    trap_act.sa_flags = 0;
+    sigaction(SIGTRAP, &trap_act, &old_act);
+  }
+  void restore() { sigaction(SIGTRAP, &old_act, nullptr); }
+};
+
+} // namespace
 
 int main() {
   describe("GameAK::ArenaAllocator", {
@@ -23,7 +48,7 @@ int main() {
     it("should align allocations correctly", {
       GameAK::byte buffer[1024];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      arena.allocate(1, 1); // offset = 1
+      arena.allocate(1, 1);
       void *p = arena.allocate(8, 8);
       expect(p != nullptr).toBeTruthy();
       expect((reinterpret_cast<GameAK::uptr>(p) & 7)).toBe(0UL);
@@ -111,6 +136,73 @@ int main() {
       arena.restore(cp1);
       expect(arena.used()).toBe(64UL);
       arena.restore(cp0);
+      expect(arena.used()).toBe(0UL);
+    });
+
+    // --- CRITICAL BUG TESTS (T2, T3, T5, T6, T9 from TODO.md) ---
+
+    it("[Critical Bug: ArenaAllocator::allocate com size = USIZE_MAX]", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+
+      arena.allocate(8, 8);
+      expect(arena.used()).toBe(8UL);
+
+      GameAK::usize max = std::numeric_limits<GameAK::usize>::max();
+      void *p = arena.allocate(max - 4, 1);
+      expect(p == nullptr).toBeTruthy();
+      expect(arena.used()).toBe(8UL);
+    });
+
+    it("[Critical Bug: ArenaAllocator::allocate<int>(USIZE_MAX / sizeof(int) + 1)]", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+
+      GameAK::usize max = std::numeric_limits<GameAK::usize>::max();
+      GameAK::usize over = max / sizeof(int) + 1;
+      int *p = arena.allocate<int>(over);
+      expect(p == nullptr).toBeTruthy();
+      expect(arena.used()).toBe(0UL);
+    });
+
+    it("[Critical Bug: ArenaAllocator: alignment non-power-of-2]", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+
+      expect(arena.can_alloc(64, 0)).toBeFalsy();
+      expect(arena.can_alloc(64, 3)).toBeFalsy();
+      expect(arena.can_alloc(64, 5)).toBeFalsy();
+      expect(arena.can_alloc(64, 6)).toBeFalsy();
+      expect(arena.can_alloc(64, 7)).toBeFalsy();
+      expect(arena.can_alloc(64, 9)).toBeFalsy();
+      expect(arena.can_alloc(64, 15)).toBeFalsy();
+    });
+
+    it("[Critical Bug: ArenaAllocator: restore com checkpoint > m_offset]", {
+      SavedSigaction saved;
+      saved.install();
+
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+
+      arena.allocate(64, 1);
+      expect(arena.used()).toBe(64UL);
+
+      if (sigsetjmp(trap_jmp_buf, 1) == 0) {
+        arena.restore(128);
+      }
+
+      expect(arena.used()).toBe(64UL);
+
+      saved.restore();
+    });
+
+    it("[Critical Bug: ArenaAllocator: zero-size allocation]", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+
+      void *p = arena.allocate(0, 1);
+      expect(p != nullptr).toBeTruthy();
       expect(arena.used()).toBe(0UL);
     });
   });

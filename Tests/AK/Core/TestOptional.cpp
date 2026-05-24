@@ -144,7 +144,44 @@ int main() {
       expect(result == "fallback").toBeTruthy();
     });
 
+    // --- CRITICAL BUG TEST (T8 from TODO.md) ---
 
+    it("[Critical Bug: Optional: self-assignment (copy)]", {
+      GameAK::Optional<int> opt(42);
+      opt = opt;
+      expect(opt.has_value()).toBeTruthy();
+      expect(*opt).toBe(42);
+    });
+
+    it("[Critical Bug: Optional: self-assignment (move)]", {
+      GameAK::Optional<int> opt(42);
+      opt = GameAK::Move(opt);
+      expect(opt.has_value()).toBeTruthy();
+      expect(*opt).toBe(42);
+    });
+
+    it("[Critical Bug: Optional: self-assignment (non-trivial copy)]", {
+      NonTrivial::alive_count = 0;
+      {
+        GameAK::Optional<NonTrivial> opt(1);
+        opt = opt;
+        expect(opt.has_value()).toBeTruthy();
+        expect((*opt).id).toBe(1);
+        expect(NonTrivial::alive_count).toBe(1);
+      }
+      expect(NonTrivial::alive_count).toBe(0);
+    });
+
+    it("[Critical Bug: Optional: self-assignment (non-trivial move)]", {
+      NonTrivial::alive_count = 0;
+      {
+        GameAK::Optional<NonTrivial> opt(1);
+        opt = GameAK::Move(opt);
+        expect(opt.has_value()).toBeTruthy();
+        expect(NonTrivial::alive_count).toBe(1);
+      }
+      expect(NonTrivial::alive_count).toBe(0);
+    });
   });
 
   return cest_result();

@@ -90,6 +90,7 @@ void PoolAllocator::release(void *ptr) noexcept {
 }
 
 void PoolAllocator::reset() noexcept {
+  if (m_block_count == 0U) return;
   m_free_count = m_block_count;
   init_free_list();
 }

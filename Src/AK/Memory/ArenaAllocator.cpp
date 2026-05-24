@@ -63,9 +63,8 @@ bool ArenaAllocator::owns(const void *ptr) const noexcept {
 Optional<usize> ArenaAllocator::alloc_impl(usize size,
                                            usize alignment) const noexcept {
   const usize aligned_offset = align_forward(m_offset, alignment);
-  const usize new_offset = aligned_offset + size;
 
-  if (new_offset > m_capacity) {
+  if (size > m_capacity - aligned_offset) {
     return Nullopt;
   }
   return aligned_offset;

@@ -66,6 +66,9 @@ public:
   /// @return        Pointer to raw storage, or @c nullptr.
   template <typename T>
   [[nodiscard]] GAMEAK_FORCE_INLINE T *allocate(usize count = 1) noexcept {
+    if (count > std::numeric_limits<usize>::max() / sizeof(T)) {
+      return nullptr;
+    }
     return static_cast<T *>(allocate(sizeof(T) * count, alignof(T)));
   }
 

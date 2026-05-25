@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: GameAK
+Description: Data-oriented game development library
+Version: @version@
+Libs: -L${libdir} -lGameAK
+Cflags: -I${includedir} -fno-exceptions -fno-rtti -std=c++20

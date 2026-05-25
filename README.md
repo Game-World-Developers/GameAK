@@ -70,17 +70,17 @@ g++ $(pkg-config --cflags --libs GameAK) main.cpp -o main
 
 ## Documentation
 
-See the [docs/](/docs/) directory for detailed documentation:
+See the [docs/](/Docs/) directory for detailed documentation:
 
-- [Overview](/docs/overview.md) — architecture and design
-- [Installation](/docs/installation.md) — build, install, pkg-config
-- [Usage Guide](/docs/usage-guide.md) — consuming GameAK in your project
-- [Core Types](/docs/core-types.md) — Types, TypeTraits, Macros
-- [Bits](/docs/bits.md) — BitOps, BitMask, BitArray, BitPack
-- [Optional](/docs/optional.md) — Optional\<T\>
-- [Memory](/docs/memory.md) — ArenaAllocator, PoolAllocator
-- [Backend](/docs/backend.md) — Runtime dispatch VTable
-- [Platform](/docs/platform.md) — Architecture, compiler, OS detection
+- [Overview](/Docs/overview.md) — architecture and design
+- [Installation](/Docs/installation.md) — build, install, pkg-config
+- [Usage Guide](/Docs/usage-guide.md) — consuming GameAK in your project
+- [Core Types](/Docs/core-types.md) — Types, TypeTraits, Macros
+- [Bits](/Docs/bits.md) — BitOps, BitMask, BitArray, BitPack
+- [Optional](/Docs/optional.md) — Optional\<T\>
+- [Memory](/Docs/memory.md) — ArenaAllocator, PoolAllocator
+- [Backend](/Docs/backend.md) — Runtime dispatch VTable
+- [Platform](/Docs/platform.md) — Architecture, compiler, OS detection
 
 ## Requirements
 

@@ -75,6 +75,7 @@ int main() {
       GameAK::PoolAllocator pool(buffer, sizeof(buffer), 32, 8);
       void *b1 = pool.acquire();
       void *b2 = pool.acquire();
+      (void)b2;
       expect(pool.free_count()).toBe(2UL);
       pool.release(b1);
       expect(pool.free_count()).toBe(3UL);
@@ -210,6 +211,9 @@ int main() {
       void *b2 = pool.acquire();
       void *b3 = pool.acquire();
       void *b4 = pool.acquire();
+      (void)b2;
+      (void)b3;
+      (void)b4;
       expect(pool.is_full()).toBeTruthy();
 
       pool.release(b1);

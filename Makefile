@@ -2,7 +2,7 @@
 # GameAK Build System (Level 2 - Engine Grade Makefile)
 # =========================================================
 
-.PHONY: all tests clean debug release sanitize compile_commands
+.PHONY: all tests clean debug release sanitize compile_commands lib install uninstall
 
 # -------------------------
 # Toolchain
@@ -26,6 +26,8 @@ INC_DIR   := Include
 BUILD_DIR := build
 OBJ_DIR    := $(BUILD_DIR)/obj
 BIN_DIR    := $(BUILD_DIR)/bin
+LIB_DIR    := $(BUILD_DIR)/lib
+LIB_PATH   := $(LIB_DIR)/libGameAK.a
 
 # -------------------------
 # Flags (base)
@@ -78,6 +80,12 @@ DEPS := $(SRC_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 # -------------------------
 TEST_BINS := $(patsubst $(OBJ_DIR)/tests/%.o,$(BIN_DIR)/tests/%,$(TEST_OBJS))
 
+# -------------------------
+# Installation
+# -------------------------
+INSTALL_PREFIX ?= /usr/local
+GAMEAK_VERSION ?= 0.1.0
+
 # =========================================================
 # RULES
 # =========================================================
@@ -102,6 +110,32 @@ $(OBJ_DIR)/tests/%.o: $(TEST_DIR)/%.cpp
 $(BIN_DIR)/tests/%: $(OBJ_DIR)/tests/%.o $(SRC_OBJS)
 	@mkdir -p $(@D)
 	$(CXX) $(BUILD_FLAGS) $^ -o $@
+
+# -------------------------
+# Static library
+# -------------------------
+lib: $(LIB_PATH)
+
+$(LIB_PATH): $(SRC_OBJS)
+	@mkdir -p $(@D)
+	$(AR) rcs $@ $^
+
+# -------------------------
+# Install / Uninstall
+# -------------------------
+install: $(LIB_PATH)
+	install -d $(DESTDIR)$(INSTALL_PREFIX)/include/
+	cp -r $(INC_DIR)/AK $(DESTDIR)$(INSTALL_PREFIX)/include/
+	install -d $(DESTDIR)$(INSTALL_PREFIX)/lib/
+	install -m 644 $(LIB_PATH) $(DESTDIR)$(INSTALL_PREFIX)/lib/
+	install -d $(DESTDIR)$(INSTALL_PREFIX)/lib/pkgconfig/
+	sed 's|@prefix@|$(INSTALL_PREFIX)|g; s|@version@|$(GAMEAK_VERSION)|g' \
+	  GameAK.pc.in > $(DESTDIR)$(INSTALL_PREFIX)/lib/pkgconfig/GameAK.pc
+
+uninstall:
+	rm -rf $(DESTDIR)$(INSTALL_PREFIX)/include/AK
+	rm -f $(DESTDIR)$(INSTALL_PREFIX)/lib/libGameAK.a
+	rm -f $(DESTDIR)$(INSTALL_PREFIX)/lib/pkgconfig/GameAK.pc
 
 # -------------------------
 # Run tests

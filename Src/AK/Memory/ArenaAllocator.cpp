@@ -1,16 +1,8 @@
-#include "AK/Core/Macros.hpp"
+#include <AK/Core/Bits/BitOps.hpp>
+#include <AK/Core/Macros.hpp>
 #include <AK/Memory/ArenaAllocator.hpp>
 
 namespace GameAK {
-
-static GAMEAK_FORCE_INLINE usize align_forward(usize offset,
-                                               usize alignment) noexcept {
-  return (offset + alignment - 1U) & ~(alignment - 1U);
-}
-
-static GAMEAK_FORCE_INLINE bool is_power_of_two(usize value) noexcept {
-  return (value != 0U) && ((value & (value - 1U)) == 0U);
-}
 
 ArenaAllocator::ArenaAllocator(void *buffer, usize capacity) noexcept
     : m_buffer{static_cast<u8 *>(buffer)}, m_capacity{capacity}, m_offset{0U} {}
@@ -26,7 +18,7 @@ void ArenaAllocator::restore(usize checkpoint) noexcept {
 }
 
 void *ArenaAllocator::allocate(usize size, usize alignment) noexcept {
-  if (GAMEAK_UNLIKELY(!is_power_of_two(alignment))) {
+  if (GAMEAK_UNLIKELY(!Bits::is_power_of_two(alignment))) {
     GAMEAK_DEBUG_BREAK();
     return nullptr;
   }
@@ -42,7 +34,7 @@ void *ArenaAllocator::allocate(usize size, usize alignment) noexcept {
 }
 
 bool ArenaAllocator::can_alloc(usize size, usize alignment) const noexcept {
-  if (!is_power_of_two(alignment))
+  if (!Bits::is_power_of_two(alignment))
     return false;
   return alloc_impl(size, alignment).has_value();
 }
@@ -62,7 +54,7 @@ bool ArenaAllocator::owns(const void *ptr) const noexcept {
 
 Optional<usize> ArenaAllocator::alloc_impl(usize size,
                                            usize alignment) const noexcept {
-  const usize aligned_offset = align_forward(m_offset, alignment);
+  const usize aligned_offset = Bits::align_up(m_offset, alignment);
 
   if (size > m_capacity - aligned_offset) {
     return Nullopt;

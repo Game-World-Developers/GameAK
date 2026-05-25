@@ -1,3 +1,4 @@
+#include <AK/Core/Bits/BitOps.hpp>
 #include <AK/Core/Macros.hpp>
 #include <AK/Memory/PoolAllocator.hpp>
 
@@ -8,10 +9,8 @@ PoolAllocator::PoolAllocator(void *buffer, usize capacity, usize block_size,
     : m_buffer{static_cast<u8 *>(buffer)}, m_block_size{block_size},
       m_block_count{0U}, m_free_count{0U}, m_free_head{nullptr} {
 
-  const bool alignment_valid =
-      (block_alignment != 0U) &&
-      ((block_alignment & (block_alignment - 1U)) == 0U) &&
-      (block_alignment >= alignof(void *));
+  const bool alignment_valid = Bits::is_power_of_two(block_alignment) &&
+                               (block_alignment >= alignof(void *));
 
   if (GAMEAK_UNLIKELY(!alignment_valid)) {
     GAMEAK_DEBUG_BREAK();

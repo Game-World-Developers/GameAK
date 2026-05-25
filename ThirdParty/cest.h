@@ -352,6 +352,33 @@ static inline void _cest_free(void* ptr, const char* file, int line) {
 #endif
 
 // ============================================================================
+// Stats and Globals (must precede fork section)
+// ============================================================================
+typedef struct {
+    int passed;
+    int failed;
+    int skipped;
+    const char* filter_pattern;
+} cest_stats_t;
+
+CEST_WEAK cest_stats_t _cest_global_stats = {0, 0, 0, NULL};
+CEST_WEAK const char* _cest_current_test_name = NULL;
+CEST_WEAK int _cest_sanitize_flags = 0;
+CEST_WEAK bool _cest_sanitize_errors_as_failures = true;
+CEST_WEAK const char* _cest_junit_output = NULL;
+CEST_WEAK const char* _cest_json_output = NULL;
+CEST_WEAK double _cest_total_time = 0.0;
+CEST_WEAK clock_t _cest_suite_start_time = 0;
+
+// Test state for skip/only
+typedef enum {
+    CEST_TEST_NORMAL,
+    CEST_TEST_SKIP,
+    CEST_TEST_ONLY
+} cest_test_state_t;
+CEST_WEAK int _cest_current_test_state = CEST_TEST_NORMAL;
+
+// ============================================================================
 // Forked test execution (isolation for sanitizers/crashes)
 // ============================================================================
 #ifdef CEST_ENABLE_FORK
@@ -377,8 +404,9 @@ static inline int _cest_run_forked_test(cest_test_fn test_fn, char* error_msg, s
         close(pipefd[0]); // Close read end
         dup2(pipefd[1], STDERR_FILENO); // Redirect stderr to pipe
         close(pipefd[1]);
+        int _before = _cest_global_stats.failed;
         test_fn();
-        exit(0);
+        exit(_cest_global_stats.failed > _before ? 1 : 0);
     } else { // Parent process
         close(pipefd[1]); // Close write end
         int status;
@@ -494,33 +522,6 @@ static inline void _cest_install_signal_handlers(void) {
 #  define _CEST_SIGNAL_SET_HOOK(id)   ((void)(id))
 #  define _CEST_SIGNAL_CLEAR_HOOK()
 #endif
-
-// ============================================================================
-// Stats and Globals
-// ============================================================================
-typedef struct {
-    int passed;
-    int failed;
-    int skipped;
-    const char* filter_pattern;
-} cest_stats_t;
-
-CEST_WEAK cest_stats_t _cest_global_stats = {0, 0, 0, NULL};
-CEST_WEAK const char* _cest_current_test_name = NULL;
-CEST_WEAK int _cest_sanitize_flags = 0; // Bitmask for active sanitizers (from CLI)
-CEST_WEAK bool _cest_sanitize_errors_as_failures = true;
-CEST_WEAK const char* _cest_junit_output = NULL;
-CEST_WEAK const char* _cest_json_output = NULL;
-CEST_WEAK double _cest_total_time = 0.0;
-CEST_WEAK clock_t _cest_suite_start_time = 0;
-
-// Test state for skip/only
-typedef enum {
-    CEST_TEST_NORMAL,
-    CEST_TEST_SKIP,
-    CEST_TEST_ONLY
-} cest_test_state_t;
-CEST_WEAK int _cest_current_test_state = CEST_TEST_NORMAL;
 
 // ============================================================================
 // Coverage Support
@@ -965,10 +966,11 @@ static _cest_bridge_t _cest_bridge __attribute__((unused)) = {
 static clock_t _cest_test_start_time __attribute__((unused)) = 0;
 
 #ifdef CEST_ENABLE_FORK
-#  define CEST_FORK_TEST(block) \
+#  define CEST_FORK_TEST(...) \
     do { \
         char _cest_sanitizer_output[4096] = {0}; \
-        int _cest_fork_result_status = _cest_run_forked_test((cest_test_fn)(block), _cest_sanitizer_output, sizeof(_cest_sanitizer_output)); \
+        auto _cest_lambda = []() { __VA_ARGS__; }; \
+        int _cest_fork_result_status = _cest_run_forked_test(+_cest_lambda, _cest_sanitizer_output, sizeof(_cest_sanitizer_output)); \
         if (_cest_fork_result_status < 0) { \
             _cest_global_stats.failed++; \
             printf("\n  " CEST_CLR_RED "✕ %s (Crashed/Sanitizer Detected, Signal %d)" CEST_CLR_RESET "\n", _cest_current_test_name, -_cest_fork_result_status); \
@@ -983,6 +985,8 @@ static clock_t _cest_test_start_time __attribute__((unused)) = 0;
             if (_cest_sanitizer_output[0] != '\0') { \
                 printf("    " CEST_CLR_DIM "Stderr Output:\n%s" CEST_CLR_RESET "\n", _cest_sanitizer_output); \
             } \
+        } else { \
+            _cest_global_stats.passed++; \
         } \
     } while(0)
 #else

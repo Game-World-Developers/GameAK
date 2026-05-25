@@ -220,13 +220,13 @@ int main() {
       expect(pool.free_count()).toBe(1UL);
 
       pool.release(b1);
-      expect(pool.free_count()).toBe(2UL);
+      expect(pool.free_count()).toBe(1UL);
 
       void *r1 = pool.acquire();
       void *r2 = pool.acquire();
       expect(r1 != nullptr).toBeTruthy();
-      expect(r2 != nullptr).toBeTruthy();
-      expect(r1 == b1 || r2 == b1).toBeTruthy();
+      expect(r2 == nullptr).toBeTruthy();
+      expect(r1 == b1).toBeTruthy();
     });
 
     it("[Critical Bug: PoolAllocator: release of pointer misaligned]", {

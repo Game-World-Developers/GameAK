@@ -141,7 +141,7 @@ sanitize:
 # Clean
 # -------------------------
 clean:
-	rm -rf $(BUILD_DIR) compile_commands.json
+	rm -rf $(BUILD_DIR)
 
 # -------------------------
 # Dependency inclusion

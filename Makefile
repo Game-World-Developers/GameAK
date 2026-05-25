@@ -34,12 +34,13 @@ COMMON_FLAGS := -std=c++20 \
                 -I$(INC_DIR) -IThirdParty \
                 -Wall -Wextra -Werror \
                 -Wno-macro-redefined \
-                -fno-exceptions -fno-rtti
+                -fno-exceptions -fno-rtti \
+                -DCEST_ENABLE_FORK
 
 # -------------------------
 # Build profiles
 # -------------------------
-DEBUG_FLAGS   := -O0 -g
+DEBUG_FLAGS   := -O0 -g -DGAMEAK_DEBUG_VALIDATE
 RELEASE_FLAGS := -O3 -DNDEBUG
 
 SAN_FLAGS := -fsanitize=address,undefined,leak

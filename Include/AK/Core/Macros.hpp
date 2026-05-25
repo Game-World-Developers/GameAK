@@ -44,5 +44,9 @@
 #define GAMEAK_DEBUG_BREAK() __asm__ volatile("int $0x03")
 #elif defined(GAMEAK_ARCH_ARM64)
 #define GAMEAK_DEBUG_BREAK() __asm__ volatile("brk #0")
+#else
+#define GAMEAK_DEBUG_BREAK() __builtin_trap()
 #endif
+#else
+#define GAMEAK_DEBUG_BREAK() __builtin_trap()
 #endif

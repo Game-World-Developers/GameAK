@@ -1,5 +1,6 @@
 #include <AK/Core/Bits/BitOps.hpp>
 #include <AK/Core/Macros.hpp>
+#include <AK/Memory/MemoryDebug.hpp>
 #include <AK/Memory/PoolAllocator.hpp>
 
 namespace GameAK {
@@ -9,10 +10,8 @@ PoolAllocator::PoolAllocator(void *buffer, usize capacity, usize block_size,
     : m_buffer{static_cast<u8 *>(buffer)}, m_block_size{block_size},
       m_block_count{0U}, m_free_count{0U}, m_free_head{nullptr} {
 
-  const bool alignment_valid = Bits::is_power_of_two(block_alignment) &&
-                               (block_alignment >= alignof(void *));
-
-  if (GAMEAK_UNLIKELY(!alignment_valid)) {
+  Memory::Debug::validate_alignment(block_alignment);
+  if (block_alignment < alignof(void *)) {
     GAMEAK_DEBUG_BREAK();
     return;
   }
@@ -58,7 +57,7 @@ bool PoolAllocator::is_valid_block(const void *ptr) const noexcept {
   }
 
   const usize offset = static_cast<usize>(own_ptr - m_buffer);
-  return (offset % m_block_size) == 0U;
+  return (offset & (m_block_size - 1)) == 0U;
 }
 
 void *PoolAllocator::acquire() noexcept {
@@ -83,7 +82,19 @@ void PoolAllocator::release(void *ptr) noexcept {
     return;
   }
 
-  *reinterpret_cast<void **>(ptr) = m_free_head;
+#if defined(GAMEAK_DEBUG_VALIDATE)
+  {
+    void *curr = m_free_head;
+    while (curr != nullptr) {
+      if (GAMEAK_UNLIKELY(curr == ptr)) {
+        return; // double-release: already in free list, no-op
+      }
+      curr = *static_cast<void **>(curr);
+    }
+  }
+#endif
+
+  *static_cast<void **>(ptr) = m_free_head;
   m_free_head = ptr;
   ++m_free_count;
 }

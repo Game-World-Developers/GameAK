@@ -1,24 +1,89 @@
 # GameAK
 
-GameAK is a STL heavily inspired by SerenityOS AK, designed for high-performance and data-oriented game development.
+GameAK is a C++20 library heavily inspired by SerenityOS AK, designed for high-performance and data-oriented game development.
 
-The project focuses on:
+## Design Philosophy
 
-- Data-Oriented Design (DOD)
-- cache-friendly memory layouts
-- flat and contiguous containers
-- bit-level operations
-- functional-style data transformations
-- predictable performance
+- **Data-Oriented Design (DOD)** — flat and contiguous memory layouts, cache-friendly access patterns
+- **No exceptions, no RTTI** — predictable codegen, no hidden cost paths
+- **Explicit memory ownership** — allocators operate on externally-owned buffers
+- **Zero-overhead abstractions** — you don't pay for what you don't use
+- **Runtime-dispatchable SIMD** — transparent SSE/AVX/NEON acceleration via VTable
+- **Deterministic** — IEEE 754 enforced via static_assert, predictable performance
 
-Instead of traditional object-heavy abstractions, GameAK operates directly on flat vectors and compact memory representations to maximize cache locality and throughput.
+## Quick Start
 
-Our goal is to provide a foundation for:
+```bash
+# Build (debug)
+make
 
-- ECS architectures
-- simulation-heavy games
-- real-time systems
-- deterministic game logic
-- large-scale world simulation
+# Build + run tests
+make tests MODE=release
 
-GameAK prioritizes explicitness, memory awareness, and low-overhead abstractions.
+# Build static library only
+make lib
+
+# Install to a prefix
+make install INSTALL_PREFIX=/opt/GameAK
+```
+
+Minimal usage:
+
+```cpp
+#include <AK/Core/Types.hpp>
+#include <AK/Memory/ArenaAllocator.hpp>
+#include <AK/Backend/Backend.hpp>
+
+int main() {
+  GameAK::Backend::init();
+
+  u8 buffer[GameAK::KiB];
+  GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+
+  int* numbers = arena.allocate<int>(10);
+  numbers[0] = 42;
+}
+```
+
+Compile:
+
+```bash
+g++ -std=c++20 -I/path/to/GameAK/include -fno-exceptions -fno-rtti \
+    -L/path/to/GameAK/lib -lGameAK main.cpp -o main
+```
+
+Or with pkg-config:
+
+```bash
+g++ $(pkg-config --cflags --libs GameAK) main.cpp -o main
+```
+
+## Modules
+
+| Module | Headers | Description |
+|--------|---------|-------------|
+| Platform | `ArchDetect`, `CompilerDetect`, `OsDetect` | Compile-time CPU/compiler/OS detection |
+| Core | `Types`, `TypeTraits`, `Macros`, `Optional` | Fundamental types, metaprogramming, utilities |
+| Bits | `BitOps`, `BitMask`, `BitArray`, `BitPack` | Bit-level operations and containers |
+| Memory | `ArenaAllocator`, `PoolAllocator`, `AllocatorConcept` | Custom allocators |
+| Backend | `Backend`, `ScalarBackend` | Runtime-dispatch VTable for memory ops |
+
+## Documentation
+
+See the [docs/](/docs/) directory for detailed documentation:
+
+- [Overview](/docs/overview.md) — architecture and design
+- [Installation](/docs/installation.md) — build, install, pkg-config
+- [Usage Guide](/docs/usage-guide.md) — consuming GameAK in your project
+- [Core Types](/docs/core-types.md) — Types, TypeTraits, Macros
+- [Bits](/docs/bits.md) — BitOps, BitMask, BitArray, BitPack
+- [Optional](/docs/optional.md) — Optional\<T\>
+- [Memory](/docs/memory.md) — ArenaAllocator, PoolAllocator
+- [Backend](/docs/backend.md) — Runtime dispatch VTable
+- [Platform](/docs/platform.md) — Architecture, compiler, OS detection
+
+## Requirements
+
+- C++20 compiler (Clang 14+, GCC 12+, MSVC 2022+)
+- 64-bit platform (x86_64 or ARM64)
+- No external dependencies (cest.h included for testing)

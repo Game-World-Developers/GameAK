@@ -334,5 +334,125 @@
    "build/obj/tests/AK/Memory/TestPoolAllocator.o"
   ],
   "file": "Tests/AK/Memory/TestPoolAllocator.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wall",
+   "-Wextra",
+   "-Werror",
+   "-Wno-macro-redefined",
+   "-fno-exceptions",
+   "-fno-rtti",
+   "-O0",
+   "-g",
+   "-MMD",
+   "-MP",
+   "-c",
+   "Tests/AK/Bits/TestBitOps.cpp",
+   "-o",
+   "build/obj/tests/AK/Bits/TestBitOps.o"
+  ],
+  "file": "Tests/AK/Bits/TestBitOps.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wall",
+   "-Wextra",
+   "-Werror",
+   "-Wno-macro-redefined",
+   "-fno-exceptions",
+   "-fno-rtti",
+   "-O0",
+   "-g",
+   "-MMD",
+   "-MP",
+   "-c",
+   "Tests/AK/Bits/TestBitMap.cpp",
+   "-o",
+   "build/obj/tests/AK/Bits/TestBitMap.o"
+  ],
+  "file": "Tests/AK/Bits/TestBitMap.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wall",
+   "-Wextra",
+   "-Werror",
+   "-Wno-macro-redefined",
+   "-fno-exceptions",
+   "-fno-rtti",
+   "-O0",
+   "-g",
+   "-MMD",
+   "-MP",
+   "-c",
+   "Tests/AK/Bits/TestBitMask.cpp",
+   "-o",
+   "build/obj/tests/AK/Bits/TestBitMask.o"
+  ],
+  "file": "Tests/AK/Bits/TestBitMask.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wall",
+   "-Wextra",
+   "-Werror",
+   "-Wno-macro-redefined",
+   "-fno-exceptions",
+   "-fno-rtti",
+   "-O0",
+   "-g",
+   "-MMD",
+   "-MP",
+   "-c",
+   "Tests/AK/Bits/TestBitPack.cpp",
+   "-o",
+   "build/obj/tests/AK/Bits/TestBitPack.o"
+  ],
+  "file": "Tests/AK/Bits/TestBitPack.cpp"
+ },
+ {
+  "directory": "/home/kitsune/Projects/GameAK",
+  "arguments": [
+   "clang++",
+   "-std=c++20",
+   "-IInclude",
+   "-IThirdParty",
+   "-Wall",
+   "-Wextra",
+   "-Werror",
+   "-Wno-macro-redefined",
+   "-fno-exceptions",
+   "-fno-rtti",
+   "-O0",
+   "-g",
+   "-MMD",
+   "-MP",
+   "-c",
+   "Tests/AK/Bits/TestBitVector.cpp",
+   "-o",
+   "build/obj/tests/AK/Bits/TestBitVector.o"
+  ],
+  "file": "Tests/AK/Bits/TestBitVector.cpp"
  }
 ]

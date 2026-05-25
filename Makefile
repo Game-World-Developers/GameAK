@@ -108,7 +108,6 @@ $(BIN_DIR)/tests/%: $(OBJ_DIR)/tests/%.o $(SRC_OBJS)
 tests: $(TEST_BINS)
 	@set -e; \
 	for bin in $(TEST_BINS); do \
-		echo "==> Running $$bin"; \
 		./$$bin; \
 	done
 

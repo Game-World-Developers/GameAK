@@ -1,458 +1,102 @@
 [
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestNumericLimits.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestNumericLimits.o"
-  ],
-  "file": "Tests/AK/Core/TestNumericLimits.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Src/AK/Memory/ArenaAllocator.cpp",
-   "-o",
-   "build/obj/src/AK/Memory/ArenaAllocator.o"
-  ],
-  "file": "Src/AK/Memory/ArenaAllocator.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Src/AK/Memory/PoolAllocator.cpp",
-   "-o",
-   "build/obj/src/AK/Memory/PoolAllocator.o"
-  ],
-  "file": "Src/AK/Memory/PoolAllocator.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestTemplateMeta.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestTemplateMeta.o"
-  ],
-  "file": "Tests/AK/Core/TestTemplateMeta.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestTypeProperties.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestTypeProperties.o"
-  ],
-  "file": "Tests/AK/Core/TestTypeProperties.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestTypeTransformations.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestTypeTransformations.o"
-  ],
-  "file": "Tests/AK/Core/TestTypeTransformations.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestTypes.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestTypes.o"
-  ],
-  "file": "Tests/AK/Core/TestTypes.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestOptional.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestOptional.o"
-  ],
-  "file": "Tests/AK/Core/TestOptional.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Core/TestMacros.cpp",
-   "-o",
-   "build/obj/tests/AK/Core/TestMacros.o"
-  ],
-  "file": "Tests/AK/Core/TestMacros.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Platform/TestArchDetect.cpp",
-   "-o",
-   "build/obj/tests/AK/Platform/TestArchDetect.o"
-  ],
-  "file": "Tests/AK/Platform/TestArchDetect.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Platform/TestCompilerDetect.cpp",
-   "-o",
-   "build/obj/tests/AK/Platform/TestCompilerDetect.o"
-  ],
-  "file": "Tests/AK/Platform/TestCompilerDetect.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Platform/TestOsDetect.cpp",
-   "-o",
-   "build/obj/tests/AK/Platform/TestOsDetect.o"
-  ],
-  "file": "Tests/AK/Platform/TestOsDetect.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Memory/TestArenaAllocator.cpp",
-   "-o",
-   "build/obj/tests/AK/Memory/TestArenaAllocator.o"
-  ],
-  "file": "Tests/AK/Memory/TestArenaAllocator.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Memory/TestPoolAllocator.cpp",
-   "-o",
-   "build/obj/tests/AK/Memory/TestPoolAllocator.o"
-  ],
-  "file": "Tests/AK/Memory/TestPoolAllocator.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Bits/TestBitOps.cpp",
-   "-o",
-   "build/obj/tests/AK/Bits/TestBitOps.o"
-  ],
-  "file": "Tests/AK/Bits/TestBitOps.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Bits/TestBitMap.cpp",
-   "-o",
-   "build/obj/tests/AK/Bits/TestBitMap.o"
-  ],
-  "file": "Tests/AK/Bits/TestBitMap.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Bits/TestBitMask.cpp",
-   "-o",
-   "build/obj/tests/AK/Bits/TestBitMask.o"
-  ],
-  "file": "Tests/AK/Bits/TestBitMask.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Bits/TestBitPack.cpp",
-   "-o",
-   "build/obj/tests/AK/Bits/TestBitPack.o"
-  ],
-  "file": "Tests/AK/Bits/TestBitPack.cpp"
- },
- {
-  "directory": "/home/kitsune/Projects/GameAK",
-  "arguments": [
-   "clang++",
-   "-std=c++20",
-   "-IInclude",
-   "-IThirdParty",
-   "-Wall",
-   "-Wextra",
-   "-Werror",
-   "-Wno-macro-redefined",
-   "-fno-exceptions",
-   "-fno-rtti",
-   "-O0",
-   "-g",
-   "-MMD",
-   "-MP",
-   "-c",
-   "Tests/AK/Bits/TestBitVector.cpp",
-   "-o",
-   "build/obj/tests/AK/Bits/TestBitVector.o"
-  ],
-  "file": "Tests/AK/Bits/TestBitVector.cpp"
- }
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Src/AK/Backend/ScalarBackend.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Backend/ScalarBackend.cpp -o build/obj/src/AK/Backend/ScalarBackend.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Src/AK/Backend/SIMDBackend.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Backend/SIMDBackend.cpp -o build/obj/src/AK/Backend/SIMDBackend.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Src/AK/Memory/ArenaAllocator.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Memory/ArenaAllocator.cpp -o build/obj/src/AK/Memory/ArenaAllocator.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Src/AK/Memory/PoolAllocator.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Memory/PoolAllocator.cpp -o build/obj/src/AK/Memory/PoolAllocator.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitArray.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitArray.cpp -o build/obj/tests/AK/Bits/TestBitArray.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitMask.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitMask.cpp -o build/obj/tests/AK/Bits/TestBitMask.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitOps.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitOps.cpp -o build/obj/tests/AK/Bits/TestBitOps.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitPack.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitPack.cpp -o build/obj/tests/AK/Bits/TestBitPack.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestMacros.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestMacros.cpp -o build/obj/tests/AK/Core/TestMacros.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestNumericLimits.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestNumericLimits.cpp -o build/obj/tests/AK/Core/TestNumericLimits.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestOptional.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestOptional.cpp -o build/obj/tests/AK/Core/TestOptional.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestTemplateMeta.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestTemplateMeta.cpp -o build/obj/tests/AK/Core/TestTemplateMeta.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestTypeProperties.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestTypeProperties.cpp -o build/obj/tests/AK/Core/TestTypeProperties.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestTypes.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestTypes.cpp -o build/obj/tests/AK/Core/TestTypes.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Core/TestTypeTransformations.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Core/TestTypeTransformations.cpp -o build/obj/tests/AK/Core/TestTypeTransformations.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Memory/TestArenaAllocator.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Memory/TestArenaAllocator.cpp -o build/obj/tests/AK/Memory/TestArenaAllocator.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Memory/TestPoolAllocator.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Memory/TestPoolAllocator.cpp -o build/obj/tests/AK/Memory/TestPoolAllocator.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Platform/TestArchDetect.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Platform/TestArchDetect.cpp -o build/obj/tests/AK/Platform/TestArchDetect.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Platform/TestCompilerDetect.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Platform/TestCompilerDetect.cpp -o build/obj/tests/AK/Platform/TestCompilerDetect.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Platform/TestOsDetect.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Platform/TestOsDetect.cpp -o build/obj/tests/AK/Platform/TestOsDetect.o"
+  }
 ]

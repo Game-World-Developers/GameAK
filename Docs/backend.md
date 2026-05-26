@@ -1,12 +1,16 @@
 # Backend Module
 
-The Backend provides a runtime-dispatch VTable for low-level memory and bitset operations, enabling transparent SIMD acceleration without recompilation.
+## Summary
+
+Runtime-dispatch VTable for low-level memory and bitset operations.
+Enables transparent SIMD acceleration without recompilation or caller changes.
+Currently uses a scalar backend backed by `std::memcpy`/`memset`/`memcmp` and simple loops.
 
 ## Architecture
 
 ```
-User Code          Inline Wrappers            VTable            Backend Implementations
-   │                    │                       │                       │
+User Code          Inline Wrappers         VTable            Backend Implementations
+   │                    │                     │                       │
    ├─ Backend::mem_copy ────► g_vtable──┐──► Detail::mem_copy (memcpy)
    ├─ Backend::mem_set  ────► g_vtable──┤──► Detail::mem_set  (memset)
    ├─ Backend::bitset_and ───► g_vtable──┤──► Detail::bitset_and (loop)
@@ -15,85 +19,108 @@ User Code          Inline Wrappers            VTable            Backend Implemen
 
 ## VTable (`<AK/Backend/Backend.hpp>`)
 
-```cpp
-struct VTable {
-  Type    type;         // Scalar or SIMD
-  usize   simd_width;   // 0 for scalar, 16/32/64 for SIMD
-  const char* name;     // "scalar", "sse2", "avx2", "neon"
+### Guarantees
 
-  // Memory operations
-  void* (*mem_copy)(void* dst, const void* src, usize size);
-  void* (*mem_set)(void* dst, int value, usize size);
-  int   (*mem_cmp)(const void* a, const void* b, usize size);
+- `init()` sets `g_vtable` to the scalar backend — always succeeds
+- inline wrappers are one-line forwarding calls through `g_vtable` — no branching beyond the function pointer call
+- function pointer signatures match `std::memcpy`, `std::memset`, `std::memcmp` for memory operations
+- bitset operations operate on `u64` arrays — no byte-level ambiguity
 
-  // Bitset operations
-  void  (*bitset_and)(u64* dst, const u64* a, const u64* b, usize word_count);
-  void  (*bitset_or)(u64* dst, const u64* a, const u64* b, usize word_count);
-  void  (*bitset_xor)(u64* dst, const u64* a, const u64* b, usize word_count);
-  void  (*bitset_not)(u64* dst, const u64* a, usize word_count);
-  usize (*bitset_popcount_range)(const u64* data, usize word_count);
-};
-```
+### Non-Guarantees
 
-## Initialization
+- VTable is a global variable — only one active backend at a time
+- `init()` does not perform CPU feature detection (future enhancement)
+- no validation that `g_vtable` is initialized before use
+- no thread-safe VTable swap mechanism exists
+
+### Failure Semantics
+
+- calling any wrapper before `init()` dereferences a null `g_vtable` — undefined behavior (crash)
+- `init()` has no failure path
+- passing null pointers to memory operations produces the same behavior as `std::memcpy(nullptr, ...)` — undefined behavior
+
+### Complexity
+
+| Operation | Complexity |
+|-----------|-------------|
+| `init` | O(1) |
+| inline wrapper dispatch | O(1) (indirect call through VTable) |
+| `mem_copy` | O(n) (delegated) |
+| `mem_set` | O(n) (delegated) |
+| `mem_cmp` | O(n) (delegated) |
+| bitset operations | O(n) (delegated) |
+
+### Threading
+
+- `init()` must be called once before any concurrent access
+- concurrent reads from `g_vtable` after initialization are safe — VTable is immutable after init
+- concurrent writes through the VTable (e.g., `mem_copy`) follow the thread-safety rules of the underlying function
+
+### Valid Usage
 
 ```cpp
 #include <AK/Backend/Backend.hpp>
 
 int main() {
-  GameAK::Backend::init();
-  // g_vtable is now set to the scalar backend
+    GameAK::Backend::init();
+    // g_vtable is now set to the scalar backend
+}
+
+void process() {
+    Backend::mem_copy(dst, src, 1024);
+    Backend::bitset_and(dst, a, b, 4);
 }
 ```
 
-Call `Backend::init()` once at program startup, before any memory or bitset operations. Currently it selects the scalar backend. In the future, it will perform runtime CPU feature detection to select the optimal SIMD backend.
-
-## Inline Wrappers
-
-All VTable function pointers have matching inline wrappers in the `GameAK::Backend` namespace. These are one-line forwarding calls through `g_vtable`:
+### Invalid Usage
 
 ```cpp
-inline void* mem_copy(void* dst, const void* src, usize size) {
-  return g_vtable->mem_copy(dst, src, size);
-}
-// ... same pattern for all functions
+// Calling before init:
+Backend::mem_copy(dst, src, 64); // undefined behavior: g_vtable is null
 ```
 
-Using these wrappers ensures callers always use the active backend, even if the VTable is swapped at runtime.
+### Invariants
+
+- `g_vtable` is non-null after `init()` returns
+- VTable function pointers are never null in `kScalarVTable`
+- `g_vtable->type` is `Type::Scalar` after `init()`
+
+### Integration Notes
+
+- consumed by `BitArray` for bulk operations (`reset`, `and_with`, `or_with`, `xor_with`, `negate`, `popcount`)
+- SIMD backend can be added by defining a second VTable and selecting it in `init()` — no caller changes required
+- `kScalarVTable` is `constexpr` — stored in read-only data
+
+---
 
 ## Scalar Backend (`<AK/Backend/ScalarBackend.hpp>`)
 
-The default backend implementation, in the `GameAK::Backend::Detail` namespace:
+### Summary
 
-| Function | Implementation |
-|----------|---------------|
-| `mem_copy` | `std::memcpy` |
-| `mem_set` | `std::memset` |
-| `mem_cmp` | `std::memcmp` |
-| `bitset_and` | Loop: `dst[i] = a[i] & b[i]` |
-| `bitset_or` | Loop: `dst[i] = a[i] \| b[i]` |
-| `bitset_xor` | Loop: `dst[i] = a[i] ^ b[i]` |
-| `bitset_not` | Loop: `dst[i] = ~a[i]` |
-| `bitset_popcount_range` | Loop: `sum += Bits::popcount(data[i])` |
+Default backend implementation in `GameAK::Backend::Detail`.
+Memory operations delegate to CRT functions; bitset operations use simple loops.
 
-The `kScalarVTable` constant is defined as:
+### Guarantees
+
+- `mem_copy` delegates to `std::memcpy` — same behavior and aliasing rules
+- `mem_set` delegates to `std::memset`
+- `mem_cmp` delegates to `std::memcmp`
+- bitset operations are deterministic — `bitset_popcount_range` uses `Bits::popcount` per word
+
+### Non-Guarantees
+
+- bitset loops are scalar — not vectorized by the backend itself (compiler may auto-vectorize)
+- no alignment assumptions for input arrays beyond natural `u64` alignment
+
+### Valid Usage
 
 ```cpp
-inline constexpr VTable kScalarVTable = {
-  .type        = Type::Scalar,
-  .simd_width  = 0,
-  .name        = "scalar",
-  .mem_copy    = &Detail::mem_copy,
-  // ... all function pointers
-};
+u64 dst[4] = {};
+u64 src[4] = {1, 2, 3, 4};
+Detail::bitset_or(dst, src, src, 4);
 ```
 
-## SIMD Backend (Stub)
+### Invariants
 
-A stub file (`Src/AK/Backend/SIMDBackend.cpp`) exists for future SIMD implementation. When SSE/AVX/NEON intrinsics are added, a second VTable (e.g., `kSIMDVTable`) will be defined and selected by `Backend::init()` based on runtime CPU feature detection.
-
-## Current Consumers
-
-- `BitArray::reset()` uses `Backend::mem_set`
-- `BitArray::and_with()`, `or_with()`, `xor_with()`, `negate()` use `Backend::bitset_*`
-- `BitArray::popcount()` uses `Backend::bitset_popcount_range`
+- `kScalarVTable` is `inline constexpr` — one definition across translation units
+- `kScalarVTable.simd_width == 0`

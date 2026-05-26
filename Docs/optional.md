@@ -1,85 +1,111 @@
-# Optional
+# Optional (`<AK/Core/Optional.hpp>`)
 
-## `<AK/Core/Optional.hpp>`
+## Summary
 
-A stack-allocated optional value type — no dynamic allocation, no exceptions.
+`Optional<T>` is a stack-allocated optional value type.
+No dynamic allocation, no exceptions.
+Empty access triggers `GAMEAK_DEBUG_BREAK()` in debug builds and is undefined behavior in release builds.
 
-### Design
+## Guarantees
 
-- Storage is a `alignas(T) u8 m_storage[sizeof(T)]` byte array
-- A `bool m_has_value` flag tracks state
-- Destructor elision: if `IsTriviallyDestructible<T>`, the destructor is a no-op (optimized away by the compiler)
-- Empty access in debug builds triggers `GAMEAK_DEBUG_BREAK()` (via `value()`)
-- Empty access in release builds is undefined behavior (maximum performance)
+- no heap allocation occurs during any operation
+- destructor is elided for `IsTriviallyDestructible<T>` types — zero overhead
+- storage is `alignas(T) u8[sizeof(T)]` — no separate allocation
+- `has_value()` and `operator bool()` are O(1)
+- `value_or()` never triggers a debug break — returns the fallback instead
 
-### API
+## Non-Guarantees
 
-| Method | Description |
-|--------|-------------|
-| `Optional()` | Empty |
-| `Optional(Nullopt)` | Empty |
-| `Optional(const T&)` | Construct from value |
-| `Optional(T&&)` | Move construct |
-| `Optional(const Optional&)` | Copy construct |
-| `Optional(Optional&&)` | Move construct |
-| `operator=(const T&)` | Assign value |
-| `operator=(T&&)` | Move assign |
-| `operator=(const Optional&)` | Copy assign |
-| `operator=(Optional&&)` | Move assign |
-| `has_value()` / `operator bool()` | Check if value is present |
-| `operator*()` | Unchecked access |
-| `value()` | Checked access (`GAMEAK_DEBUG_BREAK()` if empty) |
-| `value_or(T fallback)` | Return value or fallback |
-| `reset()` | Destroy value and set empty |
+- does not support reference types (`T&`) — use pointers instead
+- no monadic operations (`and_then`, `or_else`, `transform`)
+- no support for `Optional<Optional<T>>` — flattening is not provided
+- `operator*()` does not validate — callers must check `has_value()` first
 
-### Example
+## Failure Semantics
+
+- `value()` on an empty optional triggers `GAMEAK_DEBUG_BREAK()` in debug builds (`GAMEAK_DEBUG_VALIDATE` defined)
+- `value()` on an empty optional in release builds is undefined behavior
+- `operator*()` on an empty optional is always undefined behavior
+- `reset()` on an already-empty optional is a no-op
+
+## Memory Behavior
+
+- storage is inline within the `Optional` object — no dynamic memory
+- sizeof `Optional<T>` is `sizeof(T) + sizeof(bool)` (plus padding)
+- for trivially copyable types, copy/move are trivial
+
+## Complexity
+
+| Operation | Complexity |
+|-----------|-------------|
+| construction | O(1) |
+| copy/move | O(1) |
+| `has_value` | O(1) |
+| `value` | O(1) |
+| `value_or` | O(1) |
+| `reset` | O(1) |
+
+## Threading
+
+- external synchronization required for concurrent modification
+- concurrent reads from a const reference are safe only when no concurrent writes occur
+
+## Valid Usage
 
 ```cpp
-#include <AK/Core/Optional.hpp>
-
-GameAK::Optional<int> maybe;
+Optional<int> maybe;
 
 maybe = 42;
 if (maybe) {
-  int a = *maybe;               // 42 (unchecked)
-  int b = maybe.value();        // 42 (checked)
-  int c = maybe.value_or(-1);   // 42
+    int a = *maybe;               // unchecked
+    int b = maybe.value();        // checked
+    int c = maybe.value_or(-1);   // 42
 }
 
 maybe.reset();
-// maybe.value() would trigger DEBUG_BREAK in debug builds
+// maybe.has_value() == false
 
-// With trivially destructible types, zero overhead:
-GameAK::Optional<GameAK::i32> opt;
-static_assert(sizeof(opt) == sizeof(GameAK::i32) + sizeof(bool));
+// Trivially destructible types have zero overhead:
+Optional<i32> opt;
+static_assert(sizeof(opt) == sizeof(i32) + sizeof(bool));
 ```
 
-### Nullopt
+## Invalid Usage
 
 ```cpp
-namespace GameAK {
-  struct NulloptT {};
-  inline constexpr NulloptT Nullopt{};
-}
+Optional<int> empty;
+int x = *empty;         // undefined behavior — empty check required
+int y = empty.value();  // DEBUG_BREAK() in debug, UB in release
 ```
 
-Used to explicitly clear or construct an empty Optional:
+## Invariants
+
+- `m_has_value` is `true` iff storage contains a constructed `T`
+- `reset()` destroys the contained `T` if present, then sets `m_has_value = false`
+- move construction leaves the source in an empty state
+
+## Integration Notes
+
+- used internally by `ArenaAllocator::alloc_impl()` to express allocation success or failure
+- compatible with `IsTriviallyDestructible` — trivial destructor is elided, reducing codegen
+- `NulloptT` is a tag type for explicit empty construction; `GameAK::Nullopt` is the sentinel value
+
+---
+
+## NulloptT
+
+### Summary
+
+Tag type for explicit empty `Optional` construction.
+
+### Guarantees
+
+- `NulloptT` is an empty class — zero overhead
+- `Optional<T>` can be constructed from or assigned to `NulloptT` to produce an empty state
+
+### Valid Usage
 
 ```cpp
-GameAK::Optional<int> opt = GameAK::Nullopt;
-opt = GameAK::Nullopt;  // equivalent to opt.reset()
-```
-
-### Used Internally
-
-`Optional<usize>` is used as the return type of `ArenaAllocator::alloc_impl()` to cleanly express allocation success or failure:
-
-```cpp
-Optional<usize> ArenaAllocator::alloc_impl(usize size, usize alignment) const noexcept {
-  const usize aligned_offset = Bits::align_up(m_offset, alignment);
-  if (size > m_capacity - aligned_offset) {
-    return Nullopt;  // allocation failed
-  }
-  return aligned_offset;  // success
-}
+Optional<int> opt = Nullopt;  // empty
+opt = Nullopt;                // equivalent to opt.reset()
 ```

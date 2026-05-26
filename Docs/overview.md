@@ -1,6 +1,6 @@
 # Overview
 
-GameAK is a low-level C++20 library providing game-oriented primitives — types, allocators, bit manipulation, and a runtime-dispatch backend — designed for data-oriented, deterministic, high-performance systems.
+GameAK is a low-level C++20 library providing game-oriented primitives — types, allocators, bit manipulation, and a runtime-dispatch backend.
 
 ## Architecture
 
@@ -22,7 +22,7 @@ Platform ──► Core ──► Memory ──► Backend
 
 ### Platform Layer
 
-Detects the CPU architecture (x86_64, ARM64), compiler (MSVC, Clang, GCC), and operating system (Windows, Linux, macOS) at compile time. These defines are consumed by Macros.hpp and reserved for future OS-specific features.
+Detects the CPU architecture (x86_64, ARM64), compiler (MSVC, Clang, GCC), and operating system (Windows, Linux, macOS) at compile time. These defines are consumed by `Macros.hpp` and reserved for future OS-specific features.
 
 ### Core Layer
 
@@ -37,7 +37,7 @@ Constexpr bit-level primitives and containers: single-bit masks, power-of-two ch
 
 ### Memory Module
 
-Two allocators that operate on **externally-owned buffers** (zero internal heap usage):
+Two allocators that operate on externally-owned buffers (zero internal heap usage):
 
 - **ArenaAllocator** — bump-pointer arena with checkpoint/restore. O(1) alloc, no individual free.
 - **PoolAllocator** — fixed-size block pool with intrusive free list. O(1) acquire/release, zero metadata overhead per block.

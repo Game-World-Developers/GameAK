@@ -1,202 +1,312 @@
 # Memory Module
 
-GameAK provides two custom allocators plus C++20 concepts for allocator interfaces. Both allocators operate on **externally-owned buffers** — they never allocate or free heap memory themselves.
-
 ## AllocatorConcept (`<AK/Memory/AllocatorConcept.hpp>`)
 
-C++20 concepts defining allocator interfaces:
+### Summary
+
+Three C++20 concepts defining allocator interfaces: `Allocator` requires `allocate` and `owns`; `ArenaAllocatorC` and `PoolAllocatorC` extend for checkpoint and pool semantics respectively.
+
+### Guarantees
+
+- concepts are evaluated at compile time
+- no runtime overhead from concept checks
+- constraints use `std::same_as` for exact return type matching
+
+### Non-Guarantees
+
+- concepts do not validate runtime behavior (exhaustion, alignment, ownership)
+- a type satisfying `Allocator` may still return nullptr on allocation
+
+### Failure Semantics
+
+- concept violation produces a hard compilation error
+- no runtime validation layer exists in the concept definitions
+
+### Complexity
+
+| Operation | Complexity |
+|-----------|-------------|
+| concept satisfaction check | compile-time O(1) |
+
+### Threading
+
+Concepts are stateless — no thread-safety concerns.
+
+### Valid Usage
 
 ```cpp
-namespace GameAK {
-
-  template<typename A>
-  concept Allocator = requires(A& a, usize size, usize alignment, const void* ptr) {
-    { a.allocate(size, alignment) } -> SameAs<void*>;
-    { a.owns(ptr) } -> SameAs<bool>;
-  };
-
-  template<typename A>
-  concept ArenaAllocatorC = Allocator<A> && requires(A& a) {
-    { a.save() } -> SameAs<usize>;
-    { a.restore(usize{}) } -> SameAs<void>;
-    { a.reset() } -> SameAs<void>;
-  };
-
-  template<typename A>
-  concept PoolAllocatorC = Allocator<A> && requires(A& a) {
-    { a.release((void*)nullptr) } -> SameAs<void>;
-    { a.reset() } -> SameAs<void>;
-    { a.free_count() } -> SameAs<usize>;
-    { a.used_count() } -> SameAs<usize>;
-  };
-
+template<typename A>
+requires GameAK::Memory::Allocator<A>
+void use_allocator(A& alloc) {
+    void* p = alloc.allocate(256, 16);
 }
 ```
 
-### Helper Functions
+### Invariants
 
-```cpp
-// Allocate and construct a single object
-template<typename T, Allocator A, typename... Args>
-T* construct_at(A& alloc, Args&&... args);
+- concepts test interface shape only, not behavioral properties
 
-// Destroy an object (no-op for trivially destructible types)
-template<typename T>
-void destroy_at(T* ptr);
-```
+---
 
 ## ArenaAllocator (`<AK/Memory/ArenaAllocator.hpp>`)
 
-A bump-pointer arena allocator — the simplest and fastest allocation strategy.
+### Summary
 
-### How It Works
+ArenaAllocator performs monotonic linear allocations over a fixed memory region.
+Allocations are never individually freed.
+Memory is reclaimed through `reset()` or `restore()`.
 
-- A contiguous buffer is divided sequentially
-- An internal offset tracks the next free position
-- `allocate()` aligns the offset, bumps it, and returns the previous position
-- Memory is reclaimed via `reset()` (jumps back to offset 0) or via `save()`/`restore()` pairs
+### Guarantees
 
-### API
+- allocation order is deterministic and sequential
+- returned memory satisfies the requested alignment
+- allocator never performs heap allocations
+- `allocate()` is O(1) and branchless in the successful path
+- `save()`/`restore()`/`reset()` are O(1)
+- checkpoint is a single `usize` value — trivially copyable and composable
+- `owns()` is a range check — O(1)
 
-| Method | Complexity | Description |
-|--------|-----------|-------------|
-| `ArenaAllocator(void* buffer, usize capacity)` | O(1) | Construct over external buffer |
-| `allocate(usize size, usize alignment)` | O(1) | Aligned bump allocation |
-| `allocate<T>(usize count = 1)` | O(1) | Typed allocation (alignof(T), sizeof(T) * count) |
-| `save()` | O(1) | Returns current offset as checkpoint |
-| `restore(usize checkpoint)` | O(1) | Rewinds to checkpoint (invalidates later allocs) |
-| `reset()` | O(1) | Rewinds to offset 0 |
-| `used()` | O(1) | Bytes currently allocated |
-| `remaining()` | O(1) | Bytes available |
-| `capacity()` | O(1) | Total buffer size |
-| `owns(const void*)` | O(1) | Range check |
-| `can_alloc(usize size, usize alignment)` | O(1) | Predicate (no side effects) |
+### Non-Guarantees
 
-### Example
+- allocator is not thread-safe
+- memory is not zero-initialized
+- `restore()` does not invoke destructors
+- pointer lifetime is not tracked
+- no per-allocation metadata is stored
+- allocations are not individually reclaimable
+
+### Failure Semantics
+
+- returns `nullptr` if remaining capacity is insufficient for the requested size and alignment
+- zero-sized allocations return `nullptr`
+- invalid alignment (non-power-of-two) triggers `GAMEAK_DEBUG_BREAK()` in debug builds
+- behavior is undefined if `checkpoint` was produced by a different allocator instance
+- behavior is undefined if `checkpoint` exceeds `m_capacity`
+
+### Memory Behavior
+
+- allocations are contiguous and monotonic
+- `reset()` invalidates all previously returned pointers
+- `restore()` invalidates allocations made after the checkpoint
+- allocator never relocates memory
+- no per-allocation bookkeeping overhead
+- alignment padding is inserted between allocations as needed
+
+### Complexity
+
+| Operation | Complexity |
+|-----------|-------------|
+| `allocate` | O(1) |
+| `save` | O(1) |
+| `restore` | O(1) |
+| `reset` | O(1) |
+| `owns` | O(1) |
+| `can_alloc` | O(1) |
+
+### Threading
+
+- external synchronization is required for concurrent access
+- concurrent read-only operations (`save`, `remaining`, `capacity`, `owns`) are safe only if no concurrent writes occur
+
+### Valid Usage
 
 ```cpp
-#include <AK/Memory/ArenaAllocator.hpp>
+byte buffer[KB(64)];
+ArenaAllocator arena(buffer, sizeof(buffer));
 
-GameAK::u8 buffer[GameAK::KiB * 64];
-GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+Transform* transforms = arena.allocate<Transform>(1024);
 
-// Typed allocations
-int* ints = arena.allocate<int>(128);
-float* positions = arena.allocate<float>(3);  // x, y, z
-
-// Manual allocation with custom alignment
-void* aligned = arena.allocate(256, 64);
-
-// Scoped temporary allocations
 auto checkpoint = arena.save();
-{
-  char* temp = arena.allocate<char>(512);
-  // ... use temp ...
-}
-arena.restore(checkpoint);  // temp space reclaimed
-
-// Reset entire arena
-arena.reset();
+char* temp = arena.allocate<char>(256);
+arena.restore(checkpoint); // temp is reclaimed
 ```
 
-### Use Cases
+### Invalid Usage
 
-- Per-frame scratch allocators in game loops
-- Loading assets into a temporary arena, then discarding
-- Building command buffers or serialization output
-- Nested arena hierarchies where child arenas borrow from a parent
+```cpp
+arena.allocate(128, 3); // alignment 3 is not a power of two
+
+auto cp1 = arena.save();
+auto cp2 = arena.save();
+arena.restore(cp1);
+arena.restore(cp2); // invalid: cp2 exceeds current offset
+```
+
+### Invariants
+
+- `m_offset` never exceeds `m_capacity`
+- `allocate()` never decreases `m_offset`
+- `restore()` never increases `m_offset`
+- `save()` returns a value in `[0, m_capacity]`
+- `used() + remaining() == capacity()` is always true
+
+### Integration Notes
+
+- suitable for deterministic simulation runtimes
+- compatible with mmap-backed scratch arenas
+- checkpoint/restore pairs enable scoped temporary allocation without nesting limits
+- no hidden heap allocations occur during any operation
+
+---
 
 ## PoolAllocator (`<AK/Memory/PoolAllocator.hpp>`)
 
-A fixed-size block pool allocator using an intrusive free list — zero metadata overhead per block.
+### Summary
 
-### How It Works
+PoolAllocator manages fixed-size blocks using an intrusive free list.
+Blocks are acquired and released in O(1).
+No per-block metadata is stored for allocated blocks.
 
-- A contiguous buffer is divided into equal-sized blocks
-- The first `sizeof(void*)` bytes of each **free** block store a pointer to the next free block (intrusive linked list)
-- `acquire()` pops the head of the free list — O(1)
-- `release()` pushes the block back onto the free list — O(1)
-- No metadata is stored for **allocated** blocks
+### Guarantees
 
-### Constraints
+- `acquire()` and `release()` are O(1)
+- `release()` pushes the block back onto the free list — no searching or coalescing
+- no heap allocations occur during any operation
+- free list pointer reuses the first `sizeof(void*)` bytes of each free block
+- `owns()` validates both range and alignment
 
-| Constraint | Reason |
-|-----------|--------|
-| `block_size >= sizeof(void*)` | Must fit the free-list pointer |
-| `block_alignment >= alignof(void*)` | Free-list pointer must be aligned |
-| `block_alignment` is power of two | Standard alignment contract |
-| `block_size % block_alignment == 0` | Block-aligned stride |
+### Non-Guarantees
 
-### API
+- allocator is not thread-safe
+- `release()` does not validate that the pointer was acquired from this pool
+- releasing a block that is already free produces an incorrect free list
+- `reset()` is O(n) — it rebuilds the entire free list
+- no destructors are called by `release(void*)` (use `release<T>()` for destruction)
 
-| Method | Complexity | Description |
-|--------|-----------|-------------|
-| `PoolAllocator(void* buffer, usize capacity, usize block_size, usize block_alignment)` | O(n) | Construct and build free list |
-| `acquire()` | O(1) | Pop free block, or nullptr |
-| `acquire<T>()` | O(1) | Typed convenience wrapper |
-| `release(void* ptr)` | O(1) | Push block back to free list |
-| `release<T>(T* ptr)` | O(1) | Destructor + release |
-| `reset()` | O(n) | Rebuild free list |
-| `owns(const void*)` | O(1) | Range + alignment check |
-| `used_count()` | O(1) | Blocks currently acquired |
-| `free_count()` | O(1) | Blocks currently free |
-| `block_count()` | O(1) | Total blocks |
-| `block_size()` | O(1) | Size per block |
-| `is_empty()` | O(1) | All blocks free |
-| `is_full()` | O(1) | All blocks acquired |
+### Failure Semantics
 
-### Example
+- returns `nullptr` from `acquire()` when `free_count() == 0`
+- `release(nullptr)` is ignored (no-op)
+- `release()` of an out-of-range pointer produces undefined behavior
+- double-release produces a corrupted free list
+- invalid constructor parameters (block_size < `sizeof(void*)`, non-power-of-two alignment) trigger `GAMEAK_DEBUG_BREAK()` in debug builds
+
+### Memory Behavior
+
+- all blocks are fixed-size, determined at construction
+- free blocks store a next-pointer in their first `sizeof(void*)` bytes
+- allocated blocks use the full `block_size` for user data
+- `reset()` re-initializes the free list over the entire buffer, invalidating all previously acquired blocks
+- buffer layout is sequential: blocks are packed at `block_alignment` stride starting from the buffer base
+
+### Complexity
+
+| Operation | Complexity |
+|-----------|-------------|
+| `acquire` | O(1) |
+| `release` | O(1) |
+| `owns` | O(1) |
+| `reset` | O(n) |
+| construction | O(n) |
+
+### Threading
+
+- external synchronization is required for concurrent access
+- concurrent `acquire()` / `release()` from multiple threads is unsafe
+
+### Valid Usage
 
 ```cpp
-#include <AK/Memory/PoolAllocator.hpp>
-
 struct Particle {
-  float x, y, z;
-  float vx, vy, vz;
-  float life;
+    float x, y, z;
+    float vx, vy, vz;
+    float life;
 };
 
-GameAK::u8 buffer[GameAK::KiB * 16];
-GameAK::PoolAllocator pool(buffer, sizeof(buffer), sizeof(Particle), alignof(Particle));
+byte buffer[KB(16)];
+PoolAllocator pool(buffer, sizeof(buffer),
+                   sizeof(Particle), alignof(Particle));
 
-// Acquire
 Particle* p = pool.acquire<Particle>();
 if (p) {
-  // placement-new if needed
-  new (p) Particle{};
+    new (p) Particle{};
 }
-
-// Release (calls destructor then frees block)
 pool.release(p);
-
-// Or manually
-void* block = pool.acquire();
-pool.release(block);
 ```
 
-### Use Cases
+### Invalid Usage
 
-- Object pools for entities, particles, components
-- ECS archetype chunk allocation
-- Fixed-size message queues
-- Network packet buffers
+```cpp
+PoolAllocator pool(buffer, sizeof(buffer), 4, 4);
+// block_size = 4 is less than sizeof(void*) — invalid on 64-bit platforms
+
+void* a = pool.acquire();
+pool.release(a);
+pool.release(a); // double-free: corrupts free list
+
+void* foreign = malloc(64);
+pool.release(foreign); // undefined behavior — pointer not owned by pool
+```
+
+### Invariants
+
+- `free_count() + used_count() == block_count()`
+- `block_count()` is constant after construction
+- free list is a valid singly-linked list through free blocks
+- every block address is within `[m_buffer, m_buffer + block_count * block_size)`
+
+### Integration Notes
+
+- suitable for fixed-size object pools (entities, particles, messages)
+- compatible with ECS archetype chunk allocation
+- no external dependencies — free list is self-contained within the buffer
+- `release<T>()` conditionally invokes destructors via `IsTriviallyDestructible` — zero overhead for trivial types
+
+---
 
 ## MemoryDebug (`<AK/Memory/MemoryDebug.hpp>`)
 
-Debug-only validation utilities. All functions are no-ops when `GAMEAK_DEBUG_VALIDATE` is not defined.
+### Summary
+
+Three debug-only validation functions for allocator invariants.
+All are no-ops when `GAMEAK_DEBUG_VALIDATE` is not defined.
+
+### Guarantees
+
+- `validate_alignment` triggers `GAMEAK_DEBUG_BREAK()` if alignment is not a power of two
+- `validate_offset` triggers `GAMEAK_DEBUG_BREAK()` if offset exceeds capacity
+- `validate_pointer_in_range` triggers `GAMEAK_DEBUG_BREAK()` if pointer is outside `[buffer, buffer + capacity)`
+- all functions are eliminated entirely in release builds
+
+### Non-Guarantees
+
+- validation is not present in release builds — defects silently pass
+- `validate_pointer_in_range` does not detect dangling pointers, only out-of-range pointers
+
+### Failure Semantics
+
+- violation triggers `GAMEAK_DEBUG_BREAK()` — debugger interruption or `__builtin_trap()`
+- no exception is thrown
+- no error code is returned
+
+### Complexity
+
+| Operation | Complexity |
+|-----------|-------------|
+| `validate_alignment` | O(1) |
+| `validate_offset` | O(1) |
+| `validate_pointer_in_range` | O(1) |
+
+### Threading
+
+- functions are safe for concurrent call — they only read parameters and conditionally halt execution
+- no mutable state is accessed
+
+### Valid Usage
 
 ```cpp
-namespace GameAK::Memory::Debug {
-
-  void validate_alignment(usize alignment);
-  void validate_offset(usize offset, usize capacity);
-  void validate_pointer_in_range(const void* ptr, const u8* buffer, usize capacity);
-
+void* allocate_aligned(usize size, usize alignment) {
+    Memory::Debug::validate_alignment(alignment);
+    return allocator.allocate(size, alignment);
 }
 ```
 
-- `validate_alignment` — triggers `GAMEAK_DEBUG_BREAK()` if alignment is not a power of two
-- `validate_offset` — triggers `GAMEAK_DEBUG_BREAK()` if offset exceeds capacity
-- `validate_pointer_in_range` — triggers `GAMEAK_DEBUG_BREAK()` if pointer is outside buffer
+### Invariants
 
-In release builds, the entire validation layer is eliminated by the compiler.
+- functions are no-ops in the absence of `GAMEAK_DEBUG_VALIDATE`
+- `validate_alignment` accepts only power-of-two values
+
+### Integration Notes
+
+- intended for debug-mode assertion layers in allocator implementations
+- `GAMEAK_DEBUG_VALIDATE` should be defined in debug/test builds, undefined in release builds

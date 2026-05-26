@@ -10,6 +10,7 @@
 ///
 /// Constraints:
 ///   - block_size must be >= sizeof(void*) to store the free list pointer.
+///   - block_size must be a power of two.
 ///   - block_alignment must be a power of two and >= alignof(void*).
 ///   - block_size must be a multiple of block_alignment.
 
@@ -28,9 +29,10 @@ public:
   ///
   /// @param buffer           Backing memory. Must not be null.
   /// @param capacity         Total size of the buffer in bytes.
-  /// @param block_size       Size of each individual block in bytes.
-  /// @param block_alignment  Alignment of each block (power of two,
-  ///                         >= alignof(void*)).
+/// @param block_size       Size of each individual block in bytes
+///                         (power of two, >= sizeof(void*)).
+/// @param block_alignment  Alignment of each block (power of two,
+///                         >= alignof(void*)).
   PoolAllocator(void *buffer, usize capacity, usize block_size,
                 usize block_alignment) noexcept;
 

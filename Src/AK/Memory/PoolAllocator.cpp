@@ -17,7 +17,9 @@ PoolAllocator::PoolAllocator(void *buffer, usize capacity, usize block_size,
   }
 
   const bool size_valid =
-      (block_size >= sizeof(void *)) && ((block_size % block_alignment) == 0U);
+      (block_size >= sizeof(void *))
+      && ((block_size % block_alignment) == 0U)
+      && Bits::is_power_of_two(block_size);
 
   if (GAMEAK_UNLIKELY(!size_valid)) {
     GAMEAK_DEBUG_BREAK();

@@ -304,6 +304,33 @@ int main() {
       expect(pool.owns(misaligned)).toBeFalsy();
     });
 
+    it("[Critical Bug: PoolAllocator::is_valid_block non-power-of-two block_size]", {
+      GameAK::byte buffer[256];
+
+      GameAK::PoolAllocator pool_valid_32(buffer, sizeof(buffer), 32, 8);
+      expect(pool_valid_32.block_count()).toBe(8UL);
+
+      GameAK::PoolAllocator pool_valid_64(buffer, sizeof(buffer), 64, 16);
+      expect(pool_valid_64.block_count()).toBe(4UL);
+
+      SavedSigaction saved;
+      saved.install();
+
+      alignas(GameAK::PoolAllocator)
+          GameAK::byte pool_storage[sizeof(GameAK::PoolAllocator)];
+
+      if (sigsetjmp(trap_jmp_buf, 1) == 0) {
+        new (pool_storage)
+            GameAK::PoolAllocator(buffer, sizeof(buffer), 48, 16);
+      }
+
+      saved.restore();
+
+      GameAK::PoolAllocator *pool_48 =
+          reinterpret_cast<GameAK::PoolAllocator *>(pool_storage);
+      expect(pool_48->block_count()).toBe(0UL);
+    });
+
     it("[Critical Bug: PoolAllocator: acquire-release-acquire-release cíclico "
        "(1000x)]",
        {

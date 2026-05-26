@@ -52,6 +52,14 @@ int main() {
       expect((reinterpret_cast<GameAK::uptr>(p) & 7)).toBe(0UL);
     });
 
+    it("should align to large power-of-two alignments", {
+      alignas(256) GameAK::byte buffer[4096];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      void *p = arena.allocate(32, 256);
+      expect(p != nullptr).toBeTruthy();
+      expect((reinterpret_cast<GameAK::uptr>(p) & 255)).toBe(0UL);
+    });
+
     it("should return nullptr when allocation exceeds capacity", {
       GameAK::byte buffer[64];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
@@ -76,6 +84,18 @@ int main() {
       expect(arena.used()).toBe(128UL);
       arena.restore(checkpoint);
       expect(arena.used()).toBe(0UL);
+    });
+
+    it("should support multiple save without restore", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      (void)arena.save();
+      (void)arena.allocate(64, 1);
+      auto cp1 = arena.save();
+      (void)arena.allocate(64, 1);
+      expect(arena.used()).toBe(128UL);
+      arena.restore(cp1);
+      expect(arena.used()).toBe(64UL);
     });
 
     it("should support reset", {
@@ -123,6 +143,15 @@ int main() {
       expect(arena.used()).toBe(sizeof(int));
     });
 
+    it("should allocate typed storage with alignment requirement", {
+      struct GAMEAK_ALIGN(64) AlignedType { GameAK::u64 data[4]; };
+      alignas(64) GameAK::byte buffer[4096];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      AlignedType *p = arena.allocate<AlignedType>(8);
+      expect(p != nullptr).toBeTruthy();
+      expect((reinterpret_cast<GameAK::uptr>(p) & 63)).toBe(0UL);
+    });
+
     it("should restore to a nested checkpoint correctly", {
       GameAK::byte buffer[1024];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
@@ -135,6 +164,78 @@ int main() {
       expect(arena.used()).toBe(64UL);
       arena.restore(cp0);
       expect(arena.used()).toBe(0UL);
+    });
+
+    it("[Invariant] used() + remaining() == capacity() after alloc", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      expect(arena.used() + arena.remaining()).toBe(arena.capacity());
+      (void)arena.allocate(128, 1);
+      expect(arena.used() + arena.remaining()).toBe(arena.capacity());
+      (void)arena.allocate(256, 16);
+      expect(arena.used() + arena.remaining()).toBe(arena.capacity());
+    });
+
+    it("[Invariant] allocate() never decreases offset", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      GameAK::usize prev = arena.used();
+      for (int i = 0; i < 100; ++i) {
+        (void)arena.allocate(4, 1);
+        expect(arena.used() >= prev).toBeTruthy();
+        prev = arena.used();
+      }
+    });
+
+    it("[Invariant] restore() never increases offset", {
+      GameAK::byte buffer[1024];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      (void)arena.allocate(256, 1);
+      GameAK::usize before = arena.used();
+      arena.restore(128);
+      expect(arena.used() <= before).toBeTruthy();
+      arena.restore(0);
+      expect(arena.used() <= before).toBeTruthy();
+    });
+
+    it("[Invariant] can_alloc returns false when allocation would exceed capacity", {
+      GameAK::byte buffer[64];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      expect(arena.can_alloc(64, 1)).toBeTruthy();
+      (void)arena.allocate(64, 1);
+      expect(arena.can_alloc(1, 1)).toBeFalsy();
+    });
+
+    it("[Property] can_alloc after restore reflects freed space", {
+      GameAK::byte buffer[128];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      auto cp = arena.save();
+      (void)arena.allocate(100, 1);
+      expect(arena.can_alloc(50, 1)).toBeFalsy();
+      arena.restore(cp);
+      expect(arena.can_alloc(100, 1)).toBeTruthy();
+    });
+
+    it("[Stress: ArenaAllocator repeated alloc/reset cycle]", {
+      GameAK::byte buffer[256];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      for (int cycle = 0; cycle < 10000; ++cycle) {
+        (void)arena.allocate(32, 8);
+        (void)arena.allocate(64, 16);
+        arena.reset();
+        expect(arena.used()).toBe(0UL);
+      }
+    });
+
+    it("[Stress: ArenaAllocator checkpoint/restore cycle]", {
+      GameAK::byte buffer[256];
+      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+      for (int cycle = 0; cycle < 5000; ++cycle) {
+        auto cp = arena.save();
+        (void)arena.allocate(50, 8);
+        arena.restore(cp);
+        expect(arena.used()).toBe(0UL);
+      }
     });
 
     it("[Critical Bug: ArenaAllocator::allocate com size = USIZE_MAX]", {

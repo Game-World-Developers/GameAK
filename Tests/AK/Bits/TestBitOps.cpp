@@ -16,6 +16,10 @@ int main() {
       expect(GameAK::Bits::bit(31ull)).toBe(2147483648ull);
       expect(GameAK::Bits::bit(63ull)).toBe(9223372036854775808ull);
     });
+
+    it("[Edge: bit(31) for u32 boundary]", {
+      expect(GameAK::Bits::bit(31u)).toBe(2147483648u);
+    });
   });
 
   describe("GameAK::Bits::mask", {
@@ -67,6 +71,18 @@ int main() {
       expect(GameAK::Bits::align_up(0ull, 16ull)).toBe(0ull);
       expect(GameAK::Bits::align_up(15ull, 16ull)).toBe(16ull);
       expect(GameAK::Bits::align_up(16ull, 16ull)).toBe(16ull);
+    });
+
+    it("[Edge: align_up with zero value]", {
+      expect(GameAK::Bits::align_up(0u, 1u)).toBe(0u);
+      expect(GameAK::Bits::align_up(0u, 8u)).toBe(0u);
+      expect(GameAK::Bits::align_up(0u, 4096u)).toBe(0u);
+    });
+
+    it("[Edge: align_up with already-aligned value]", {
+      for (GameAK::u32 align = 1; align <= 4096; align *= 2) {
+        expect(GameAK::Bits::align_up(align, align)).toBe(align);
+      }
     });
   });
 

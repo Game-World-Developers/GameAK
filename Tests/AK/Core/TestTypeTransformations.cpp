@@ -43,6 +43,10 @@ int main() {
       expect((std::is_same_v<GameAK::AddConst<const int>, const int>)).toBeTruthy();
     });
 
+    it("[Invariant] AddConst is idempotent for const types", {
+      static_assert(std::is_same_v<GameAK::AddConst<const int>, const int>);
+    });
+
     it("should correctly add references", {
       static_assert(std::is_same_v<GameAK::AddLValueRef<int>, int &>);
       static_assert(std::is_same_v<GameAK::AddRValueRef<int>, int &&>);
@@ -57,6 +61,11 @@ int main() {
       expect((std::is_same_v<GameAK::Decay<int[10]>, int *>)).toBeTruthy();
       expect((std::is_same_v<GameAK::Decay<int(int)>, int (*)(int)>)).toBeTruthy();
       expect((std::is_same_v<GameAK::Decay<const int &>, int>)).toBeTruthy();
+    });
+
+    it("[Invariant] RemoveRef is idempotent for non-reference types", {
+      static_assert(std::is_same_v<GameAK::RemoveRef<int>, int>);
+      static_assert(std::is_same_v<GameAK::RemoveRef<void>, void>);
     });
   });
 

@@ -45,6 +45,13 @@ int main() {
       expect(test_enable_if(10.5f)).toBeFalsy();
     });
 
+    it("[Edge] EnableIf with void default works for SFINAE", {
+      auto check_int = [](auto x) -> GameAK::EnableIf<GameAK::IsIntegral<decltype(x)>> {
+        (void)x;
+      };
+      check_int(42);
+    });
+
     it("should have correct IntegralConstant value and types", {
       static_assert(GameAK::IntegralConstant<int, 42>::value == 42);
       static_assert(GameAK::IntegralConstant<bool, true>::value);
@@ -114,6 +121,17 @@ int main() {
       GameAK::Swap(a, b);
       expect(a).toBe(2);
       expect(b).toBe(1);
+    });
+
+    it("[Invariant] IsSame is reflexive", {
+      static_assert(GameAK::IsSame<int, int>);
+      static_assert(GameAK::IsSame<void, void>);
+      static_assert(GameAK::IsSame<double, double>);
+    });
+
+    it("[Invariant] IsBaseOf is reflexive", {
+      static_assert(GameAK::IsBaseOf<Base, Base>);
+      static_assert(GameAK::IsBaseOf<Derived, Derived>);
     });
   });
 

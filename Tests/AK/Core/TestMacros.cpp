@@ -50,6 +50,16 @@ int main() {
 #endif
     });
 
+    it("[Invariant] ALIGN_SIMD adapts to architecture", {
+#if defined(GAMEAK_ARCH_X86_64)
+      struct GAMEAK_ALIGN_SIMD S { char c; };
+      expect((int)alignof(S)).toBe(32);
+#elif defined(GAMEAK_ARCH_ARM64)
+      struct GAMEAK_ALIGN_SIMD S { char c; };
+      expect((int)alignof(S)).toBe(16);
+#endif
+    });
+
     it("should compile DEBUG_BREAK without error",
        { expect(true).toBeTruthy(); });
   });

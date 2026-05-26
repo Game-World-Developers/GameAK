@@ -42,8 +42,27 @@ int main() {
       GameAK::Bits::BitMask<TestFlag> mask;
       mask.set(TestFlag::Write);
       mask.set(TestFlag::Exec);
-      // Write = bit 1, Exec = bit 2 -> 0b110 = 6
       expect(mask.raw()).toBe(6u);
+    });
+
+    it("[Property] set(x) => has(x) for all flags", {
+      GameAK::Bits::BitMask<TestFlag> mask;
+      TestFlag flags[] = {TestFlag::Read, TestFlag::Write, TestFlag::Exec, TestFlag::Four};
+      for (auto f : flags) {
+        mask.set(f);
+        expect(mask.has(f)).toBeTruthy();
+      }
+      for (auto f : flags) {
+        expect(mask.has(f)).toBeTruthy();
+      }
+      expect(mask.raw()).toBe((1u << 0) | (1u << 1) | (1u << 2) | (1u << 3));
+    });
+
+    it("[Property] clear(x) => has(x) == false after set(x)", {
+      GameAK::Bits::BitMask<TestFlag> mask;
+      mask.set(TestFlag::Exec);
+      mask.clear(TestFlag::Exec);
+      expect(mask.has(TestFlag::Exec)).toBeFalsy();
     });
 
     it("should support const operations", {

@@ -104,6 +104,21 @@ int main() {
       expect(opt.has_value()).toBeFalsy();
     });
 
+    it("should support operator bool", {
+      GameAK::Optional<int> empty;
+      GameAK::Optional<int> full(42);
+      expect((bool)empty).toBeFalsy();
+      expect((bool)full).toBeTruthy();
+    });
+
+    it("should support operator* for access", {
+      GameAK::Optional<int> opt(42);
+      int &ref = *opt;
+      expect(ref).toBe(42);
+      ref = 100;
+      expect(*opt).toBe(100);
+    });
+
     it("should work with non-trivial destructor types", {
       NonTrivial::alive_count = 0;
       {
@@ -144,7 +159,27 @@ int main() {
       expect(result == "fallback").toBeTruthy();
     });
 
-    // --- CRITICAL BUG TEST (T8 from TODO.md) ---
+    it("[Invariant] size of Optional<int> is sizeof(int) + sizeof(bool)", {
+      expect(sizeof(GameAK::Optional<int>) > sizeof(int)).toBeTruthy();
+    });
+
+    it("[Invariant] has_value is false after reset", {
+      GameAK::Optional<int> opt(42);
+      opt.reset();
+      expect(opt.has_value()).toBeFalsy();
+      opt.reset();
+      expect(opt.has_value()).toBeFalsy();
+    });
+
+    it("[Property] value_or returns the stored value when present", {
+      GameAK::Optional<int> opt(100);
+      expect(opt.value_or(-1)).toBe(100);
+    });
+
+    it("[Property] value_or returns fallback when empty", {
+      GameAK::Optional<int> opt;
+      expect(opt.value_or(-1)).toBe(-1);
+    });
 
     it("[Critical Bug: Optional: self-assignment (copy)]", {
       GameAK::Optional<int> opt(42);

@@ -75,15 +75,6 @@ int main() {
       expect(call_test(arr, 127)).toBeFalsy();
     });
 
-    it("should work with const reference", {
-      GameAK::u64 storage[1] = {};
-      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 1);
-      arr.set(42);
-
-      const auto& carr = arr;
-      expect(call_test(carr, 42)).toBeTruthy();
-    });
-
     it("should handle bits at word boundaries", {
       GameAK::u64 storage[2] = {};
       GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
@@ -94,6 +85,36 @@ int main() {
 
       expect(call_test(arr, 63)).toBeFalsy();
       expect(call_test(arr, 64)).toBeTruthy();
+    });
+
+    it("[Property] set(x) => test(x) == true for all bits in range", {
+      GameAK::u64 storage[4] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 4);
+
+      for (GameAK::usize i = 0; i < 256; ++i) {
+        arr.set(i);
+        expect(call_test(arr, i)).toBeTruthy();
+      }
+    });
+
+    it("[Property] clear(x) => test(x) == false after set(x)", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+
+      for (GameAK::usize i = 0; i < 128; ++i) {
+        arr.set(i);
+        arr.clear(i);
+        expect(call_test(arr, i)).toBeFalsy();
+      }
+    });
+
+    it("should work with const reference", {
+      GameAK::u64 storage[1] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 1);
+      arr.set(42);
+
+      const auto& carr = arr;
+      expect(call_test(carr, 42)).toBeTruthy();
     });
   });
 
@@ -246,6 +267,16 @@ int main() {
       GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> a(storage, 2);
 
       expect(a.popcount() == 4UL).toBeTruthy();
+    });
+
+    it("[Property] popcount equals number of set bits", {
+      GameAK::u64 storage[4] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> a(storage, 4);
+
+      for (GameAK::usize i = 0; i < 256; i += 2) {
+        a.set(i);
+      }
+      expect(a.popcount() == 128UL).toBeTruthy();
     });
   });
 

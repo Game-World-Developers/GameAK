@@ -1,3 +1,9 @@
+/// @file
+/// @brief Allocator concepts and construction/destruction helpers.
+///
+/// Defines Allocator, ArenaAllocatorC, and PoolAllocatorC concepts,
+/// plus generic construct_at / destroy_at utilities backed by any Allocator.
+
 #pragma once
 
 #include <AK/Core/TypeTraits.hpp>

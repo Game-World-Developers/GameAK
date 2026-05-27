@@ -1,3 +1,9 @@
+/// @file
+/// @brief Backend dispatch layer — runtime VTable selection for memory and bitset ops.
+///
+/// Provides indirect dispatch through a global VTable, allowing the same
+/// API to use scalar or SIMD backends selected at runtime.
+
 #pragma once
 
 #include <AK/Core/Types.hpp>

@@ -1,3 +1,10 @@
+/// @file
+/// @brief Bounded and unbounded bit array view over an external u64 buffer.
+///
+/// Provides set, clear, test, and bulk bitwise operations (and, or, xor, not)
+/// over a fixed-size word array. Bounds checking is selectable at compile time
+/// via the BitCheck template parameter.
+
 #pragma once
 
 #include <AK/Backend/Backend.hpp>

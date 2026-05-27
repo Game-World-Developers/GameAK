@@ -19,8 +19,8 @@ namespace GameAK::Bits {
 /// Returns 1 << n — a single-bit value with bit @p n set.
 ///
 /// @tparam T  Unsigned integer type of the result.
-/// @param  n  Bit position (0-indexed). Behaviour is undefined if n
-///            exceeds the width of T.
+/// @param n  Bit position (0-indexed). Behaviour is undefined if n
+///           exceeds the width of T.
 /// @return    T(1) << n.
 template <typename T> [[nodiscard]] constexpr T bit(T n) noexcept {
   return T(1) << n;
@@ -29,8 +29,8 @@ template <typename T> [[nodiscard]] constexpr T bit(T n) noexcept {
 /// Returns (1 << n) - 1 — a mask with the lowest @p n bits set.
 ///
 /// @tparam T  Unsigned integer type of the result.
-/// @param  n  Number of low bits to set. Behaviour is undefined if n
-///            exceeds the width of T.
+/// @param n  Number of low bits to set. Behaviour is undefined if n
+///           exceeds the width of T.
 /// @return    (T(1) << n) - 1.
 template <typename T> [[nodiscard]] constexpr T mask(T n) noexcept {
   return (T(1) << n) - 1;
@@ -39,7 +39,7 @@ template <typename T> [[nodiscard]] constexpr T mask(T n) noexcept {
 /// Returns @c true when @p value is a power of two (or zero).
 ///
 /// @tparam T  Integer type (signed or unsigned).
-/// @param  value  Value to test.
+/// @param value  Value to test.
 /// @return        @c false when value is zero; @c true when value has
 ///                exactly one bit set.
 template <typename T>
@@ -53,8 +53,8 @@ template <typename T>
 /// (value + alignment - 1) & ~(alignment - 1).
 ///
 /// @tparam T  Unsigned integer type.
-/// @param  value      Value to align.
-/// @param  alignment  Power-of-two alignment boundary.
+/// @param value      Value to align.
+/// @param alignment  Power-of-two alignment boundary.
 /// @return            Aligned value >= @p value.
 template <typename T>
 [[nodiscard]] constexpr T align_up(T value, T alignment) noexcept {
@@ -66,7 +66,7 @@ template <typename T>
 /// Uses the Brian Kernighan algorithm: iterates once per set bit.
 ///
 /// @tparam T  Unsigned integer type.
-/// @param  value  Input value.
+/// @param value  Input value.
 /// @return        Number of bits set to 1.
 template <typename T> [[nodiscard]] constexpr T popcount(T value) noexcept {
   T count = 0;

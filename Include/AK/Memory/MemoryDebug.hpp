@@ -1,3 +1,9 @@
+/// @file
+/// @brief Debug-only validation helpers for memory operations.
+///
+/// Provides alignment, offset, and pointer-range validation. All functions
+/// compile to no-ops in release (non-debug) builds.
+
 #pragma once
 
 #include <AK/Core/Bits/BitOps.hpp>

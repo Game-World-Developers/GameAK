@@ -62,7 +62,7 @@ public:
   /// caller is responsible for placement-new where required.
   ///
   /// @tparam T      Type to allocate storage for.
-  /// @param  count  Number of T objects (default: 1).
+  /// @param count  Number of T objects (default: 1).
   /// @return        Pointer to raw storage, or @c nullptr.
   template <typename T>
   [[nodiscard]] GAMEAK_FORCE_INLINE T *allocate(usize count = 1) noexcept {

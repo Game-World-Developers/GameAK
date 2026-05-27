@@ -34,11 +34,11 @@ public:
   // -------------------------
 
   void clear_layer(usize index) noexcept {
-    Backend::mem_set(m_storage + (index * m_words), 0, m_words * sizeof(u64));
+    (void)Backend::mem_set(m_storage + (index * m_words), 0, m_words * sizeof(u64));
   }
 
   void clear_all() noexcept {
-    Backend::mem_set(m_storage, 0, m_layers * m_words * sizeof(u64));
+    (void)Backend::mem_set(m_storage, 0, m_layers * m_words * sizeof(u64));
   }
 
   // -------------------------

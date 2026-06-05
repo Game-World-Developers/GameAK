@@ -71,6 +71,80 @@ public:
     return Backend::bitset_popcount_range(m_data, m_words);
   }
 
+  bool any() const noexcept {
+    for (usize i = 0; i < m_words; ++i) {
+      if (m_data[i] != 0) return true;
+    }
+    return false;
+  }
+
+  bool none() const noexcept { return !any(); }
+
+  bool all() const noexcept {
+    for (usize i = 0; i < m_words; ++i) {
+      if (m_data[i] != ~u64(0)) return false;
+    }
+    return true;
+  }
+
+  /// Returns the index of the first set bit, or words()*64 if none.
+  usize find_first_set() const noexcept {
+    for (usize i = 0; i < m_words; ++i) {
+      if (m_data[i] != 0) {
+        return i * kBitsPerWord + ctz(m_data[i]);
+      }
+    }
+    return m_words * kBitsPerWord;
+  }
+
+  /// Returns the index of the next set bit after @p prev,
+  /// or words()*64 if none.
+  usize find_next_set(usize prev) const noexcept {
+    usize bit = prev + 1;
+    usize word_idx = bit / kBitsPerWord;
+    if (word_idx >= m_words) return m_words * kBitsPerWord;
+
+    u64 word = m_data[word_idx] & (~u64(0) << (bit % kBitsPerWord));
+    if (word != 0) return word_idx * kBitsPerWord + ctz(word);
+
+    for (usize i = word_idx + 1; i < m_words; ++i) {
+      if (m_data[i] != 0) return i * kBitsPerWord + ctz(m_data[i]);
+    }
+    return m_words * kBitsPerWord;
+  }
+
+  /// Sets bits in the inclusive range [first, last].
+  void set_range(usize first, usize last) noexcept {
+    if (first > last) return;
+    usize fw = first / kBitsPerWord;
+    usize lw = last / kBitsPerWord;
+
+    if (fw == lw) {
+      u64 m = range_mask(first % kBitsPerWord, last % kBitsPerWord);
+      m_data[fw] |= m;
+    } else {
+      m_data[fw] |= ~u64(0) << (first % kBitsPerWord);
+      for (usize i = fw + 1; i < lw; ++i) m_data[i] = ~u64(0);
+      m_data[lw] |= ~u64(0) >> (kBitsPerWord - 1 - (last % kBitsPerWord));
+    }
+  }
+
+  /// Clears bits in the inclusive range [first, last].
+  void clear_range(usize first, usize last) noexcept {
+    if (first > last) return;
+    usize fw = first / kBitsPerWord;
+    usize lw = last / kBitsPerWord;
+
+    if (fw == lw) {
+      u64 m = range_mask(first % kBitsPerWord, last % kBitsPerWord);
+      m_data[fw] &= ~m;
+    } else {
+      m_data[fw] &= ~(~u64(0) << (first % kBitsPerWord));
+      for (usize i = fw + 1; i < lw; ++i) m_data[i] = 0;
+      m_data[lw] &= ~(~u64(0) >> (kBitsPerWord - 1 - (last % kBitsPerWord)));
+    }
+  }
+
   usize words() const noexcept { return m_words; }
   u64* data() noexcept { return m_data; }
   const u64* data() const noexcept { return m_data; }
@@ -86,7 +160,11 @@ private:
   }
 
   static constexpr u64 bit_mask(usize bit) noexcept {
-    return u64(1) << (bit % kBitsPerWord);
+    return Bits::bit(u64(bit % kBitsPerWord));
+  }
+
+  static constexpr u64 range_mask(usize low, usize high) noexcept {
+    return (~u64(0) << low) & (~u64(0) >> (kBitsPerWord - 1 - high));
   }
 };
 

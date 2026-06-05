@@ -215,7 +215,154 @@ int main() {
     });
   });
 
-  describe("GameAK::Bits::BitArray batch operations", {
+  describe("GameAK::Bits::BitArray<BitCheck::None> queries", {
+    it("any() should return false for empty array", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      expect(arr.any()).toBeFalsy();
+    });
+
+    it("any() should return true when a bit is set", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      arr.set(42);
+      expect(arr.any()).toBeTruthy();
+    });
+
+    it("none() should return true for empty array", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      expect(arr.none()).toBeTruthy();
+    });
+
+    it("none() should return false when a bit is set", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      arr.set(0);
+      expect(arr.none()).toBeFalsy();
+    });
+
+    it("all() should return false for empty array", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      expect(arr.all()).toBeFalsy();
+    });
+
+    it("all() should return true when all bits are set", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      storage[0] = ~0ull;
+      storage[1] = ~0ull;
+      expect(arr.all()).toBeTruthy();
+    });
+
+    it("all() should return false when only one word is full", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      storage[0] = ~0ull;
+      storage[1] = 0;
+      expect(arr.all()).toBeFalsy();
+    });
+  });
+
+  describe("GameAK::Bits::BitArray<BitCheck::None> find_first_set", {
+    it("should return sentinel for empty array", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      expect(arr.find_first_set()).toBe(128u);
+    });
+
+    it("should find first set bit in first word", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      arr.set(3);
+      expect(arr.find_first_set()).toBe(3u);
+    });
+
+    it("should find first set bit in second word", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      arr.set(100);
+      expect(arr.find_first_set()).toBe(100u);
+    });
+
+    it("find_next_set should iterate all set bits", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+      arr.set(5);
+      arr.set(10);
+      arr.set(100);
+
+      GameAK::usize bit = arr.find_first_set();
+      expect(bit).toBe(5u);
+      bit = arr.find_next_set(bit);
+      expect(bit).toBe(10u);
+      bit = arr.find_next_set(bit);
+      expect(bit).toBe(100u);
+      bit = arr.find_next_set(bit);
+      expect(bit).toBe(128u);
+    });
+  });
+
+  describe("GameAK::Bits::BitArray<BitCheck::None> range operations", {
+    it("set_range should set bits within a single word", {
+      GameAK::u64 storage[1] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 1);
+
+      arr.set_range(2, 5);
+      expect(call_test(arr, 1)).toBeFalsy();
+      expect(call_test(arr, 2)).toBeTruthy();
+      expect(call_test(arr, 3)).toBeTruthy();
+      expect(call_test(arr, 4)).toBeTruthy();
+      expect(call_test(arr, 5)).toBeTruthy();
+      expect(call_test(arr, 6)).toBeFalsy();
+      expect(storage[0] == 0b111100u).toBeTruthy(); // bits 2,3,4,5 set
+    });
+
+    it("set_range should set bits across words", {
+      GameAK::u64 storage[2] = {};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 2);
+
+      arr.set_range(60, 68);
+      expect(call_test(arr, 59)).toBeFalsy();
+      expect(call_test(arr, 60)).toBeTruthy();
+      expect(call_test(arr, 63)).toBeTruthy();
+      expect(call_test(arr, 64)).toBeTruthy();
+      expect(call_test(arr, 68)).toBeTruthy();
+      expect(call_test(arr, 69)).toBeFalsy();
+    });
+
+    it("clear_range should clear bits within a single word", {
+      GameAK::u64 storage[1] = {0b11111111};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 1);
+
+      arr.clear_range(2, 5);
+      expect(call_test(arr, 2)).toBeFalsy();
+      expect(call_test(arr, 3)).toBeFalsy();
+      expect(call_test(arr, 4)).toBeFalsy();
+      expect(call_test(arr, 5)).toBeFalsy();
+      expect(call_test(arr, 0)).toBeTruthy();
+      expect(call_test(arr, 1)).toBeTruthy();
+      expect(call_test(arr, 6)).toBeTruthy();
+      expect(call_test(arr, 7)).toBeTruthy();
+    });
+
+    it("clear_range should clear bits across words", {
+      GameAK::u64 storage[4] = {~0ull, ~0ull, ~0ull, ~0ull};
+      GameAK::Bits::BitArray<GameAK::Bits::BitCheck::None> arr(storage, 4);
+
+      arr.clear_range(60, 130);
+      expect(call_test(arr, 59)).toBeTruthy();
+      expect(call_test(arr, 60)).toBeFalsy();
+      expect(call_test(arr, 130)).toBeFalsy();
+      expect(call_test(arr, 131)).toBeTruthy();
+      expect(storage[0] == 0x0FFFFFFFFFFFFFFFull).toBeTruthy();
+      expect(storage[1] == 0ull).toBeTruthy();
+      expect(storage[2] == 0xFFFFFFFFFFFFFFF8ull).toBeTruthy();
+    });
+  });
+
+  describe("GameAK::Bits::BitArray<BitCheck::None> batch operations", {
     it("should perform AND operation", {
       GameAK::u64 storage_a[2] = {0b1100, 0b0011};
       GameAK::u64 storage_b[2] = {0b1010, 0b0101};

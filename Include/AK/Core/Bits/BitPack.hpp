@@ -82,6 +82,18 @@ public:
   /// by subsequent writes.
   void reset() noexcept { m_bit_offset = 0; }
 
+  /// Advances the stream position by @p bits without reading or writing.
+  void advance(BitCount bits) noexcept { m_bit_offset += bits.get(); }
+
+  /// Advances the stream position to the next byte boundary.
+  void align_to_byte() noexcept {
+    usize rem = m_bit_offset % kBitsPerByte;
+    if (rem != 0) m_bit_offset += kBitsPerByte - rem;
+  }
+
+  /// Sets the absolute stream position to @p bit_offset.
+  void seek(usize bit_offset) noexcept { m_bit_offset = bit_offset; }
+
   /// @return Current bit offset (total bits written or read so far).
   usize bit_offset() const noexcept { return m_bit_offset; }
 

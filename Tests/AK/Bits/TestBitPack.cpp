@@ -133,6 +133,40 @@ int main() {
       expect(pack.read(GameAK::Bits::BitCount(8))).toBe(42u);
     });
 
+    it("advance should move bit_offset without modifying buffer", {
+      GameAK::u8 buffer[16] = {};
+      GameAK::Bits::BitPack pack(buffer);
+
+      pack.write(0xFF, GameAK::Bits::BitCount(8));
+      pack.advance(GameAK::Bits::BitCount(16));
+      expect(pack.bit_offset()).toBe(24u);
+      pack.reset();
+      expect(pack.read(GameAK::Bits::BitCount(8))).toBe(0xFFu);
+    });
+
+    it("align_to_byte should round up to next byte boundary", {
+      GameAK::u8 buffer[16] = {};
+      GameAK::Bits::BitPack pack(buffer);
+
+      expect(pack.bit_offset()).toBe(0u);
+      pack.align_to_byte();
+      expect(pack.bit_offset()).toBe(0u);
+
+      pack.write(1, GameAK::Bits::BitCount(3));
+      pack.align_to_byte();
+      expect(pack.bit_offset()).toBe(8u);
+    });
+
+    it("seek should set absolute bit_offset", {
+      GameAK::u8 buffer[16] = {};
+      GameAK::Bits::BitPack pack(buffer);
+
+      pack.write(0xFF, GameAK::Bits::BitCount(8));
+      pack.seek(0);
+      expect(pack.bit_offset()).toBe(0u);
+      expect(pack.read(GameAK::Bits::BitCount(8))).toBe(0xFFu);
+    });
+
     it("[Stress: sequential write/read round-trip]", {
       GameAK::u8 buffer[128] = {};
       GameAK::Bits::BitPack pack(buffer);

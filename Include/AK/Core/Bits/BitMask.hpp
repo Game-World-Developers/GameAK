@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <AK/Core/Bits/BitOps.hpp>
 #include <AK/Core/Types.hpp>
 
 namespace GameAK::Bits {
@@ -59,7 +60,7 @@ private:
   UnderlyingType m_value;
 
   static constexpr UnderlyingType to_bit(Enum select_enum) noexcept {
-    return UnderlyingType(1) << static_cast<UnderlyingType>(select_enum);
+    return Bits::bit(static_cast<UnderlyingType>(select_enum));
   };
 };
 } // namespace GameAK::Bits

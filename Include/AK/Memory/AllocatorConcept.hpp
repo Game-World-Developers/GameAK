@@ -9,6 +9,7 @@
 #include <AK/Core/TypeTraits.hpp>
 #include <AK/Core/Types.hpp>
 
+#include <concepts>
 #include <new>
 
 namespace GameAK::Memory {

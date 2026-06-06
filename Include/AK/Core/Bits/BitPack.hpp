@@ -88,7 +88,8 @@ public:
   /// Advances the stream position to the next byte boundary.
   void align_to_byte() noexcept {
     usize rem = m_bit_offset % kBitsPerByte;
-    if (rem != 0) m_bit_offset += kBitsPerByte - rem;
+    if (rem != 0)
+      m_bit_offset += kBitsPerByte - rem;
   }
 
   /// Sets the absolute stream position to @p bit_offset.

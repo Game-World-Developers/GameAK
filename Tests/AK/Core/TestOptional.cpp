@@ -159,9 +159,8 @@ int main() {
       expect(result == "fallback").toBeTruthy();
     });
 
-    it("[Invariant] size of Optional<int> is sizeof(int) + sizeof(bool)", {
-      expect(sizeof(GameAK::Optional<int>) > sizeof(int)).toBeTruthy();
-    });
+    it("[Invariant] size of Optional<int> is sizeof(int) + sizeof(bool)",
+       { expect(sizeof(GameAK::Optional<int>) > sizeof(int)).toBeTruthy(); });
 
     it("[Invariant] has_value is false after reset", {
       GameAK::Optional<int> opt(42);

@@ -2,27 +2,42 @@
   {
     "directory": "/home/kitsune/Projects/GameAK",
     "file": "Src/AK/Backend/ScalarBackend.cpp",
-    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Backend/ScalarBackend.cpp -o build/obj/src/AK/Backend/ScalarBackend.o"
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Backend/ScalarBackend.cpp -o build/obj/src/AK/Backend/ScalarBackend.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
     "file": "Src/AK/Backend/SIMDBackend.cpp",
-    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Backend/SIMDBackend.cpp -o build/obj/src/AK/Backend/SIMDBackend.o"
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Backend/SIMDBackend.cpp -o build/obj/src/AK/Backend/SIMDBackend.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
     "file": "Src/AK/Memory/ArenaAllocator.cpp",
-    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Memory/ArenaAllocator.cpp -o build/obj/src/AK/Memory/ArenaAllocator.o"
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Memory/ArenaAllocator.cpp -o build/obj/src/AK/Memory/ArenaAllocator.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
     "file": "Src/AK/Memory/PoolAllocator.cpp",
-    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Memory/PoolAllocator.cpp -o build/obj/src/AK/Memory/PoolAllocator.o"
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Src/AK/Memory/PoolAllocator.cpp -o build/obj/src/AK/Memory/PoolAllocator.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Backend/TestBackend.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Backend/TestBackend.cpp -o build/obj/tests/AK/Backend/TestBackend.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
     "file": "Tests/AK/Bits/TestBitArray.cpp",
     "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitArray.cpp -o build/obj/tests/AK/Bits/TestBitArray.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitField.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitField.cpp -o build/obj/tests/AK/Bits/TestBitField.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitLayer.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitLayer.cpp -o build/obj/tests/AK/Bits/TestBitLayer.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
@@ -38,6 +53,11 @@
     "directory": "/home/kitsune/Projects/GameAK",
     "file": "Tests/AK/Bits/TestBitPack.cpp",
     "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitPack.cpp -o build/obj/tests/AK/Bits/TestBitPack.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Bits/TestBitSetIterator.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Bits/TestBitSetIterator.cpp -o build/obj/tests/AK/Bits/TestBitSetIterator.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
@@ -76,8 +96,23 @@
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Memory/TestAllocatorConcept.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Memory/TestAllocatorConcept.cpp -o build/obj/tests/AK/Memory/TestAllocatorConcept.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
     "file": "Tests/AK/Memory/TestArenaAllocator.cpp",
     "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Memory/TestArenaAllocator.cpp -o build/obj/tests/AK/Memory/TestArenaAllocator.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Memory/TestJanitor.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Memory/TestJanitor.cpp -o build/obj/tests/AK/Memory/TestJanitor.o"
+  },
+  {
+    "directory": "/home/kitsune/Projects/GameAK",
+    "file": "Tests/AK/Memory/TestMemoryDebug.cpp",
+    "command": "clang++ -std=c++20 -IInclude -IThirdParty -Wall -Wextra -Werror -Wno-macro-redefined -fno-exceptions -fno-rtti -DCEST_ENABLE_FORK -O0 -g -DGAMEAK_DEBUG_VALIDATE -c Tests/AK/Memory/TestMemoryDebug.cpp -o build/obj/tests/AK/Memory/TestMemoryDebug.o"
   },
   {
     "directory": "/home/kitsune/Projects/GameAK",

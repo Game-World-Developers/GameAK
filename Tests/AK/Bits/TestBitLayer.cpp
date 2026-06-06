@@ -3,17 +3,20 @@
 
 namespace {
 
-static bool call_test(const GameAK::Bits::BitLayer& bl, GameAK::usize layer_idx, GameAK::usize bit) {
+using DefaultLayer = GameAK::Bits::BitLayer<GameAK::Backend::ScalarBuiltinsBackend>;
+
+static bool call_test(const DefaultLayer &bl, GameAK::usize layer_idx,
+                      GameAK::usize bit) {
   return (bl.layer(layer_idx).test)(bit);
 }
 
 } // namespace
 
 int main() {
-  describe("GameAK::Bits::BitLayer", {
+  describe("GameAK::Bits::BitLayer (ScalarBuiltinsBackend)", {
     it("should report correct layer count and words per layer", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       expect(bl.layers() == 3).toBeTruthy();
       expect(bl.words_per_layer() == 2).toBeTruthy();
@@ -21,7 +24,7 @@ int main() {
 
     it("should provide writable layer views", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 2);
+      DefaultLayer bl(storage, 2, 2);
 
       bl.layer(0).set(5);
       expect(call_test(bl, 0, 5)).toBeTruthy();
@@ -29,27 +32,29 @@ int main() {
 
     it("should provide readable const layer views", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 2);
+      DefaultLayer bl(storage, 2, 2);
 
       bl.layer(0).set(42);
 
-      const auto& cbl = bl;
+      const auto &cbl = bl;
       expect(call_test(cbl, 0, 42)).toBeTruthy();
     });
 
-    it("[Property] layer(index) set(x) => test(x) == true for all bits in range", {
-      GameAK::u64 storage[8] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 4);
+    it("[Property] layer(index) set(x) => test(x) == true for all bits in "
+       "range",
+       {
+         GameAK::u64 storage[8] = {};
+         DefaultLayer bl(storage, 2, 4);
 
-      for (GameAK::usize i = 0; i < 256; ++i) {
-        bl.layer(0).set(i);
-        expect(call_test(bl, 0, i)).toBeTruthy();
-      }
-    });
+         for (GameAK::usize i = 0; i < 256; ++i) {
+           bl.layer(0).set(i);
+           expect(call_test(bl, 0, i)).toBeTruthy();
+         }
+       });
 
     it("[Property] clear(x) => test(x) == false after set(x)", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 2);
+      DefaultLayer bl(storage, 2, 2);
 
       for (GameAK::usize i = 0; i < 128; ++i) {
         bl.layer(0).set(i);
@@ -60,7 +65,7 @@ int main() {
 
     it("should clear all bits in a specific layer", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 2);
+      DefaultLayer bl(storage, 2, 2);
 
       bl.layer(0).set(10);
       bl.layer(0).set(50);
@@ -74,7 +79,7 @@ int main() {
 
     it("[Property] clear_layer does not affect other layers", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 2);
+      DefaultLayer bl(storage, 2, 2);
 
       bl.layer(0).set(10);
       bl.layer(1).set(20);
@@ -86,7 +91,7 @@ int main() {
 
     it("should clear all bits across all layers", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(10);
       bl.layer(1).set(20);
@@ -100,7 +105,7 @@ int main() {
 
     it("and_layers should compute bitwise AND of two layers into destination", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(2);
       bl.layer(0).set(3);
@@ -120,7 +125,7 @@ int main() {
 
     it("or_layers should compute bitwise OR of two layers into destination", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(2);
       bl.layer(0).set(3);
@@ -140,7 +145,7 @@ int main() {
 
     it("xor_layers should compute bitwise XOR of two layers into destination", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(2);
       bl.layer(0).set(3);
@@ -160,7 +165,7 @@ int main() {
 
     it("[Property] and_layers with dst == a is safe", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(2);
       bl.layer(0).set(3);
@@ -182,7 +187,7 @@ int main() {
 
     it("[Property] and_layers with dst == b is safe", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(2);
       bl.layer(0).set(3);
@@ -204,7 +209,7 @@ int main() {
 
     it("[Property] xor_layers with a == b yields zero", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(3);
       bl.layer(0).set(64);
@@ -217,7 +222,7 @@ int main() {
 
     it("[Property] or_layers with a == b yields a", {
       GameAK::u64 storage[6] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 2);
+      DefaultLayer bl(storage, 3, 2);
 
       bl.layer(0).set(3);
       bl.layer(0).set(64);
@@ -230,7 +235,7 @@ int main() {
 
     it("should handle word boundaries across multi-word layers", {
       GameAK::u64 storage[12] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 6);
+      DefaultLayer bl(storage, 2, 6);
 
       bl.layer(0).set(63);
       bl.layer(0).set(64);
@@ -245,7 +250,7 @@ int main() {
 
     it("[Edge] single-word layers", {
       GameAK::u64 storage[3] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 1);
+      DefaultLayer bl(storage, 3, 1);
 
       bl.layer(0).set(0);
       bl.layer(1).set(63);
@@ -258,7 +263,7 @@ int main() {
 
     it("[Edge] single layer", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 1, 4);
+      DefaultLayer bl(storage, 1, 4);
 
       bl.layer(0).set(0);
       bl.layer(0).set(255);
@@ -269,7 +274,7 @@ int main() {
 
     it("[Edge] many layers", {
       GameAK::u64 storage[10] = {};
-      GameAK::Bits::BitLayer bl(storage, 10, 1);
+      DefaultLayer bl(storage, 10, 1);
 
       for (GameAK::usize i = 0; i < 10; ++i) {
         bl.layer(i).set(i * 6);
@@ -282,7 +287,7 @@ int main() {
 
     it("should compute popcount for a layer", {
       GameAK::u64 storage[4] = {};
-      GameAK::Bits::BitLayer bl(storage, 2, 2);
+      DefaultLayer bl(storage, 2, 2);
 
       bl.layer(0).set(0);
       bl.layer(0).set(2);
@@ -296,7 +301,7 @@ int main() {
 
     it("[Invariant] layers are independent — no bit leakage", {
       GameAK::u64 storage[12] = {};
-      GameAK::Bits::BitLayer bl(storage, 4, 3);
+      DefaultLayer bl(storage, 4, 3);
 
       for (GameAK::usize i = 0; i < 192; ++i) {
         bl.layer(0).set(i);
@@ -315,7 +320,7 @@ int main() {
 
     it("[Stress] repeated layer operations across many cycles", {
       GameAK::u64 storage[12] = {};
-      GameAK::Bits::BitLayer bl(storage, 3, 4);
+      DefaultLayer bl(storage, 3, 4);
 
       for (GameAK::usize i = 0; i < 10000; ++i) {
         bl.clear_all();

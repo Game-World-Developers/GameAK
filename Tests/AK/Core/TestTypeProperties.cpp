@@ -3,9 +3,16 @@
 
 namespace {
 enum TestEnum { A, B };
-union TestUnion { int i; float f; };
-struct TestClass { int x; };
-struct NonTrivial { ~NonTrivial() {} };
+union TestUnion {
+  int i;
+  float f;
+};
+struct TestClass {
+  int x;
+};
+struct NonTrivial {
+  ~NonTrivial() {}
+};
 } // namespace
 
 int main() {
@@ -39,7 +46,9 @@ int main() {
 
     it("should correctly identify trivially copyable types", {
       expect(GameAK::IsTriviallyCopyable<int>).toBeTruthy();
-      struct Simple { int x; };
+      struct Simple {
+        int x;
+      };
       expect(GameAK::IsTriviallyCopyable<Simple>).toBeTruthy();
     });
 
@@ -133,7 +142,9 @@ int main() {
 
     it("should correctly identify trivially default constructible types", {
       static_assert(GameAK::IsTriviallyDefaultConstructible<int>);
-      struct Trivial { int x; };
+      struct Trivial {
+        int x;
+      };
       static_assert(GameAK::IsTriviallyDefaultConstructible<Trivial>);
       expect(GameAK::IsTriviallyDefaultConstructible<int>).toBeTruthy();
       expect(GameAK::IsTriviallyDefaultConstructible<Trivial>).toBeTruthy();
@@ -157,9 +168,12 @@ int main() {
     });
 
     it("[Invariant] IsTriviallyRelocatable == IsTriviallyCopyable", {
-      static_assert(GameAK::IsTriviallyRelocatable<int> == GameAK::IsTriviallyCopyable<int>);
-      static_assert(GameAK::IsTriviallyRelocatable<TestClass> == GameAK::IsTriviallyCopyable<TestClass>);
-      static_assert(GameAK::IsTriviallyRelocatable<NonTrivial> == GameAK::IsTriviallyCopyable<NonTrivial>);
+      static_assert(GameAK::IsTriviallyRelocatable<int> ==
+                    GameAK::IsTriviallyCopyable<int>);
+      static_assert(GameAK::IsTriviallyRelocatable<TestClass> ==
+                    GameAK::IsTriviallyCopyable<TestClass>);
+      static_assert(GameAK::IsTriviallyRelocatable<NonTrivial> ==
+                    GameAK::IsTriviallyCopyable<NonTrivial>);
     });
 
     it("should correctly identify default constructible types", {
@@ -187,9 +201,8 @@ int main() {
       expect(GameAK::IsCopyAssignable<int>).toBeTruthy();
     });
 
-    it("[Invariant] non-trivial type is not trivially destructible", {
-      static_assert(!GameAK::IsTriviallyDestructible<NonTrivial>);
-    });
+    it("[Invariant] non-trivial type is not trivially destructible",
+       { static_assert(!GameAK::IsTriviallyDestructible<NonTrivial>); });
   });
 
   return cest_result();

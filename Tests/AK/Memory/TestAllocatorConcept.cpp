@@ -21,7 +21,7 @@ int main() {
     it("should construct an object in arena storage", {
       GameAK::byte buffer[256];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      int* p = GameAK::Memory::construct_at<int>(arena, 42);
+      int *p = GameAK::Memory::construct_at<int>(arena, 42);
       expect(p != nullptr).toBeTruthy();
       expect(*p).toBe(42);
     });
@@ -30,7 +30,7 @@ int main() {
       g_constructed = 0;
       GameAK::byte buffer[256];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      NonTrivial* p = GameAK::Memory::construct_at<NonTrivial>(arena, 99);
+      NonTrivial *p = GameAK::Memory::construct_at<NonTrivial>(arena, 99);
       expect(p != nullptr).toBeTruthy();
       expect(p->value).toBe(99);
       expect(g_constructed).toBe(1);
@@ -39,7 +39,7 @@ int main() {
     it("should return nullptr when arena is exhausted", {
       GameAK::byte buffer[1];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      int* p = GameAK::Memory::construct_at<int>(arena, 42);
+      int *p = GameAK::Memory::construct_at<int>(arena, 42);
       expect(p == nullptr).toBeTruthy();
     });
 
@@ -47,7 +47,7 @@ int main() {
       struct Empty {};
       GameAK::byte buffer[8];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      Empty* p = GameAK::Memory::construct_at<Empty>(arena);
+      Empty *p = GameAK::Memory::construct_at<Empty>(arena);
       expect(p != nullptr).toBeTruthy();
     });
   });
@@ -56,7 +56,7 @@ int main() {
     it("should be a no-op for trivially destructible types", {
       GameAK::byte buffer[64];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      int* p = GameAK::Memory::construct_at<int>(arena, 7);
+      int *p = GameAK::Memory::construct_at<int>(arena, 7);
       GameAK::Memory::destroy_at(p);
       expect(true).toBeTruthy();
     });
@@ -66,7 +66,7 @@ int main() {
       g_destroyed = 0;
       GameAK::byte buffer[256];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      NonTrivial* p = GameAK::Memory::construct_at<NonTrivial>(arena, 5);
+      NonTrivial *p = GameAK::Memory::construct_at<NonTrivial>(arena, 5);
       expect(g_constructed).toBe(1);
       expect(g_destroyed).toBe(0);
       GameAK::Memory::destroy_at(p);

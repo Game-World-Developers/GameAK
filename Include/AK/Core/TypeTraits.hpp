@@ -1,8 +1,10 @@
 /// @file
-/// @brief Compile-time type traits, metafunctions, and utility helpers for GameAK.
+/// @brief Compile-time type traits, metafunctions, and utility helpers for
+/// GameAK.
 ///
-/// Provides a consistent GameAK-namespaced wrapper around @c &lt;type_traits&gt;
-/// primitives, plus custom metafunctions such as @c IntegralConstant,
+/// Provides a consistent GameAK-namespaced wrapper around @c
+/// &lt;type_traits&gt; primitives, plus custom metafunctions such as @c
+/// IntegralConstant,
 /// @c Conditional, @c EnableIf, and the @c Is* family of variable templates.
 ///
 /// Also includes lightweight implementations of @c Move, @c Forward, and
@@ -229,14 +231,17 @@ template <typename T> constexpr RemoveRef<T> &&Move(T &&the) noexcept {
 
 /// Forwards an lvalue or rvalue depending on @c T.
 ///
-/// @tparam T  The original type of the argument (used to preserve value category).
+/// @tparam T  The original type of the argument (used to preserve value
+/// category).
 /// @param the  The value to forward.
-/// @return     An rvalue reference if @c T is an rvalue reference type; otherwise an lvalue reference.
+/// @return     An rvalue reference if @c T is an rvalue reference type;
+/// otherwise an lvalue reference.
 template <typename T> constexpr T &&Forward(RemoveRef<T> &the) noexcept {
   return static_cast<T &&>(the);
 }
 
-/// Forwards an rvalue, with a compile-time check that @c T is not an lvalue reference.
+/// Forwards an rvalue, with a compile-time check that @c T is not an lvalue
+/// reference.
 ///
 /// @tparam T  The original type of the argument.
 /// @param the  The rvalue to forward.
@@ -250,7 +255,8 @@ template <typename T> constexpr T &&Forward(RemoveRef<T> &&the) noexcept {
 
 /// Swaps two values using move semantics.
 ///
-/// @tparam T  The type of the values (must be move-constructible and move-assignable).
+/// @tparam T  The type of the values (must be move-constructible and
+/// move-assignable).
 /// @param a_val  First value.
 /// @param b_val  Second value.
 template <typename T>

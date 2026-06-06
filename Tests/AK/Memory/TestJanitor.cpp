@@ -1,4 +1,5 @@
 #include <AK/Core/TypeTraits.hpp>
+#include <AK/Core/Types.hpp>
 #include <AK/Memory/Janitor.hpp>
 #include <cest.h>
 #include <new>
@@ -38,7 +39,7 @@ int main() {
     it("should release ownership without calling destructor", {
       g_destructor_count = 0;
       GameAK::byte buf[sizeof(Tracker)];
-      Tracker* t = new (buf) Tracker();
+      Tracker *t = new (buf) Tracker();
       {
         Janitor<Tracker> jan(t);
         jan.Release();
@@ -53,7 +54,7 @@ int main() {
     it("should reset and call destructor", {
       g_destructor_count = 0;
       GameAK::byte buf[sizeof(Tracker)];
-      Tracker* t = new (buf) Tracker();
+      Tracker *t = new (buf) Tracker();
       {
         Janitor<Tracker> jan(t);
         jan.Reset();
@@ -66,7 +67,7 @@ int main() {
     it("should call destructor when going out of scope", {
       g_destructor_count = 0;
       GameAK::byte buf[sizeof(Tracker)];
-      Tracker* t = new (buf) Tracker();
+      Tracker *t = new (buf) Tracker();
       {
         Janitor<Tracker> jan(t);
         expect(g_destructor_count).toBe(0);
@@ -77,7 +78,7 @@ int main() {
     it("should support move constructor", {
       g_destructor_count = 0;
       GameAK::byte buf[sizeof(Tracker)];
-      Tracker* t = new (buf) Tracker();
+      Tracker *t = new (buf) Tracker();
       {
         Janitor<Tracker> jan1(t);
         Janitor<Tracker> jan2(GameAK::Move(jan1));
@@ -91,8 +92,8 @@ int main() {
       g_destructor_count = 0;
       GameAK::byte buf1[sizeof(Tracker)];
       GameAK::byte buf2[sizeof(Tracker)];
-      Tracker* t1 = new (buf1) Tracker();
-      Tracker* t2 = new (buf2) Tracker();
+      Tracker *t1 = new (buf1) Tracker();
+      Tracker *t2 = new (buf2) Tracker();
       {
         Janitor<Tracker> jan1(t1);
         Janitor<Tracker> jan2(t2);
@@ -107,8 +108,8 @@ int main() {
       g_destructor_count = 0;
       GameAK::byte buf1[sizeof(Tracker)];
       GameAK::byte buf2[sizeof(Tracker)];
-      Tracker* old_t = new (buf1) Tracker();
-      Tracker* new_t = new (buf2) Tracker();
+      Tracker *old_t = new (buf1) Tracker();
+      Tracker *new_t = new (buf2) Tracker();
       {
         Janitor<Tracker> jan_old(old_t);
         Janitor<Tracker> jan_new(new_t);

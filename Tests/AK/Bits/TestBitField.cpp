@@ -5,37 +5,31 @@ int main() {
   describe("GameAK::Bits::BitField<u32, 0, 8>", {
     using BF = GameAK::Bits::BitField<GameAK::u32, 0, 8>;
 
-    it("should extract low byte", {
-      expect(BF::extract(0x12345678u)).toBe(0x78u);
-    });
+    it("should extract low byte",
+       { expect(BF::extract(0x12345678u)).toBe(0x78u); });
 
-    it("should insert low byte", {
-      expect(BF::insert(0x12345600u, 0xABu)).toBe(0x123456ABu);
-    });
+    it("should insert low byte",
+       { expect(BF::insert(0x12345600u, 0xABu)).toBe(0x123456ABu); });
   });
 
   describe("GameAK::Bits::BitField<u32, 8, 8>", {
     using BF = GameAK::Bits::BitField<GameAK::u32, 8, 8>;
 
-    it("should extract second byte", {
-      expect(BF::extract(0x12345678u)).toBe(0x56u);
-    });
+    it("should extract second byte",
+       { expect(BF::extract(0x12345678u)).toBe(0x56u); });
 
-    it("should insert second byte", {
-      expect(BF::insert(0x12340078u, 0xABu)).toBe(0x1234AB78u);
-    });
+    it("should insert second byte",
+       { expect(BF::insert(0x12340078u, 0xABu)).toBe(0x1234AB78u); });
   });
 
   describe("GameAK::Bits::BitField<u32, 0, 32>", {
     using BF = GameAK::Bits::BitField<GameAK::u32, 0, 32>;
 
-    it("should extract full width", {
-      expect(BF::extract(0xDEADBEEFu)).toBe(0xDEADBEEFu);
-    });
+    it("should extract full width",
+       { expect(BF::extract(0xDEADBEEFu)).toBe(0xDEADBEEFu); });
 
-    it("should insert full width", {
-      expect(BF::insert(0x00000000u, 0xCAFEBABEu)).toBe(0xCAFEBABEu);
-    });
+    it("should insert full width",
+       { expect(BF::insert(0x00000000u, 0xCAFEBABEu)).toBe(0xCAFEBABEu); });
   });
 
   describe("GameAK::Bits::BitField<u64, 0, 1>", {
@@ -63,7 +57,8 @@ int main() {
     it("should insert middle bits", {
       // Clear bits 3-7 of 0xFFFF, insert 0b10101 = 21 at pos 3
       // result = 0b1111_1111_1010_1111 = 0xFFAF
-      expect(BF::insert(GameAK::u16(0xFFFFu), GameAK::u16(21))).toBe(GameAK::u16(0xFFAFu));
+      expect(BF::insert(GameAK::u16(0xFFFFu), GameAK::u16(21)))
+          .toBe(GameAK::u16(0xFFAFu));
     });
   });
 
@@ -77,7 +72,8 @@ int main() {
 
     it("should insert into top 6 bits", {
       // 0x00 with 0b101010 at pos 2 = 0b10101000 = 0xA8
-      expect(BF::insert(GameAK::u8(0x00u), GameAK::u8(42))).toBe(GameAK::u8(0xA8u));
+      expect(BF::insert(GameAK::u8(0x00u), GameAK::u8(42)))
+          .toBe(GameAK::u8(0xA8u));
     });
   });
 

@@ -1,4 +1,3 @@
-#include <AK/Core/Bits/BitArray.hpp>
 #include <AK/Core/Bits/BitSetIterator.hpp>
 #include <cest.h>
 

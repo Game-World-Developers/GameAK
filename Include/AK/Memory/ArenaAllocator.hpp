@@ -115,8 +115,8 @@ private:
   usize m_capacity;
   usize m_offset;
 
-  [[nodiscard]] Optional<usize>
-  alloc_impl(usize size, usize alignment) const noexcept;
+  [[nodiscard]] Optional<usize> alloc_impl(usize size,
+                                           usize alignment) const noexcept;
 };
 
 } // namespace GameAK

@@ -21,8 +21,10 @@ int main() {
     });
 
     it("should have correct limits for i64 and u64", {
-      expect(std::numeric_limits<GameAK::i64>::max()).toBe(9223372036854775807ll);
-      expect(std::numeric_limits<GameAK::u64>::max()).toBe(18446744073709551615ull);
+      expect(std::numeric_limits<GameAK::i64>::max())
+          .toBe(9223372036854775807ll);
+      expect(std::numeric_limits<GameAK::u64>::max())
+          .toBe(18446744073709551615ull);
     });
 
     it("should have correct limits for floating point types", {

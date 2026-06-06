@@ -29,7 +29,8 @@ public:
   /// Constructs a mask with a single flag set.
   ///
   /// @param select_enum  Enum value naming the initial flag.
-  explicit constexpr BitMask(Enum select_enum) noexcept : m_value(to_bit(select_enum)) {}
+  explicit constexpr BitMask(Enum select_enum) noexcept
+      : m_value(to_bit(select_enum)) {}
 
   /// Sets the flag corresponding to @p select_enum.
   ///

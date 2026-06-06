@@ -43,17 +43,14 @@ int main() {
       expect(GameAK::TiB).toBe(1024 * GameAK::GiB);
     });
 
-    it("should have correct TiB constant", {
-      expect(GameAK::TiB).toBe(1099511627776ull);
-    });
+    it("should have correct TiB constant",
+       { expect(GameAK::TiB).toBe(1099511627776ull); });
 
-    it("[Invariant] usize matches pointer width", {
-      expect(sizeof(GameAK::usize)).toBe(sizeof(void *));
-    });
+    it("[Invariant] usize matches pointer width",
+       { expect(sizeof(GameAK::usize)).toBe(sizeof(void *)); });
 
-    it("[Invariant] uptr matches pointer width", {
-      expect(sizeof(GameAK::uptr)).toBe(sizeof(void *));
-    });
+    it("[Invariant] uptr matches pointer width",
+       { expect(sizeof(GameAK::uptr)).toBe(sizeof(void *)); });
   });
 
   return cest_result();

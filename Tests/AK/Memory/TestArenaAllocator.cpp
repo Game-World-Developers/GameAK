@@ -144,7 +144,9 @@ int main() {
     });
 
     it("should allocate typed storage with alignment requirement", {
-      struct GAMEAK_ALIGN(64) AlignedType { GameAK::u64 data[4]; };
+      struct GAMEAK_ALIGN(64) AlignedType {
+        GameAK::u64 data[4];
+      };
       alignas(64) GameAK::byte buffer[4096];
       GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
       AlignedType *p = arena.allocate<AlignedType>(8);
@@ -198,13 +200,15 @@ int main() {
       expect(arena.used() <= before).toBeTruthy();
     });
 
-    it("[Invariant] can_alloc returns false when allocation would exceed capacity", {
-      GameAK::byte buffer[64];
-      GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
-      expect(arena.can_alloc(64, 1)).toBeTruthy();
-      (void)arena.allocate(64, 1);
-      expect(arena.can_alloc(1, 1)).toBeFalsy();
-    });
+    it("[Invariant] can_alloc returns false when allocation would exceed "
+       "capacity",
+       {
+         GameAK::byte buffer[64];
+         GameAK::ArenaAllocator arena(buffer, sizeof(buffer));
+         expect(arena.can_alloc(64, 1)).toBeTruthy();
+         (void)arena.allocate(64, 1);
+         expect(arena.can_alloc(1, 1)).toBeFalsy();
+       });
 
     it("[Property] can_alloc after restore reflects freed space", {
       GameAK::byte buffer[128];

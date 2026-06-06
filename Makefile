@@ -41,6 +41,8 @@ TEST_FLAGS := -DCEST_ENABLE_FORK
 DEBUG_FLAGS   := -O0 -g -DGAMEAK_DEBUG_VALIDATE
 RELEASE_FLAGS := -O3 -DNDEBUG
 SAN_FLAGS     := -fsanitize=address,undefined,leak
+TSAN_FLAGS    := -fsanitize=thread -O1 -g
+MSAN_FLAGS    := -fsanitize=memory -fsanitize-memory-track-origins -O1 -g
 
 # Mode selection
 MODE ?= debug
@@ -51,21 +53,25 @@ else ifeq ($(MODE),release)
   MODE_FLAGS := $(RELEASE_FLAGS)
 else ifeq ($(MODE),sanitize)
   MODE_FLAGS := $(DEBUG_FLAGS) $(SAN_FLAGS)
+else ifeq ($(MODE),tsan)
+  MODE_FLAGS := $(TSAN_FLAGS)
+else ifeq ($(MODE),msan)
+  MODE_FLAGS := $(MSAN_FLAGS)
 else
-  $(error Unknown MODE=$(MODE). Use debug, release, or sanitize.)
+  $(error Unknown MODE=$(MODE). Use debug, release, sanitize, tsan, or msan.)
 endif
 
 BUILD_FLAGS      := $(COMMON_FLAGS) $(MODE_FLAGS)
 TEST_BUILD_FLAGS := $(COMMON_FLAGS) $(TEST_FLAGS) $(MODE_FLAGS)
 
 # Sources (deterministic ordering)
-SRC_SRCS    := $(shell find $(SRC_DIR) -name '*.cpp' | sort)
-TEST_SRCS   := $(shell find $(TEST_DIR) -name '*.cpp' | sort)
-SRC_HEADERS := $(shell find $(INC_DIR) -name '*.hpp' | sort)
+SRC_SRCS      := $(shell find $(SRC_DIR) -name '*.cpp' | sort)
+TEST_SRCS     := $(shell find $(TEST_DIR) -name '*.cpp' | sort)
+SRC_HEADERS   := $(shell find $(INC_DIR) -name '*.hpp' | sort)
 
-SRC_OBJS  := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/src/%.o,$(SRC_SRCS))
-TEST_OBJS := $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/tests/%.o,$(TEST_SRCS))
-TEST_BINS := $(patsubst $(OBJ_DIR)/tests/%.o,$(BIN_DIR)/tests/%,$(TEST_OBJS))
+SRC_OBJS      := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/src/%.o,$(SRC_SRCS))
+TEST_OBJS     := $(patsubst $(TEST_DIR)/%.cpp,$(OBJ_DIR)/tests/%.o,$(TEST_SRCS))
+TEST_BINS     := $(patsubst $(OBJ_DIR)/tests/%.o,$(BIN_DIR)/tests/%,$(TEST_OBJS))
 
 DEPS := $(SRC_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 
@@ -76,9 +82,9 @@ GAMEAK_VERSION ?= 0.1.0
 # Secondary (keep intermediate .o files for caching)
 .SECONDARY: $(SRC_OBJS) $(TEST_OBJS)
 
-# Compilation commands (separate flags for src vs tests)
-COMPILE_SRC  = $(CXX) $(BUILD_FLAGS) -MMD -MP -c $< -o $@
-COMPILE_TEST = $(CXX) $(TEST_BUILD_FLAGS) -MMD -MP -c $< -o $@
+# Compilation commands (separate flags for src vs tests vs examples)
+COMPILE_SRC     = $(CXX) $(BUILD_FLAGS) -MMD -MP -c $< -o $@
+COMPILE_TEST    = $(CXX) $(TEST_BUILD_FLAGS) -MMD -MP -c $< -o $@
 
 # =========================================================
 # Compilation rules
@@ -159,6 +165,12 @@ release:
 
 sanitize:
 	$(MAKE) MODE=sanitize all
+
+tsan:
+	$(MAKE) MODE=tsan all
+
+msan:
+	$(MAKE) MODE=msan all
 
 # =========================================================
 # Code quality

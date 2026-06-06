@@ -17,9 +17,8 @@ int main() {
       expect(GameAK::Bits::bit(63ull)).toBe(9223372036854775808ull);
     });
 
-    it("[Edge: bit(31) for u32 boundary]", {
-      expect(GameAK::Bits::bit(31u)).toBe(2147483648u);
-    });
+    it("[Edge: bit(31) for u32 boundary]",
+       { expect(GameAK::Bits::bit(31u)).toBe(2147483648u); });
   });
 
   describe("GameAK::Bits::mask", {
@@ -47,9 +46,8 @@ int main() {
       expect(GameAK::Bits::is_power_of_two(2147483648u)).toBeTruthy();
     });
 
-    it("should return false for zero", {
-      expect(GameAK::Bits::is_power_of_two(0u)).toBeFalsy();
-    });
+    it("should return false for zero",
+       { expect(GameAK::Bits::is_power_of_two(0u)).toBeFalsy(); });
 
     it("should return false for non-powers of two", {
       expect(GameAK::Bits::is_power_of_two(3u)).toBeFalsy();
@@ -87,9 +85,8 @@ int main() {
   });
 
   describe("GameAK::Bits::popcount", {
-    it("should return 0 for zero", {
-      expect(GameAK::Bits::popcount(0u)).toBe(0u);
-    });
+    it("should return 0 for zero",
+       { expect(GameAK::Bits::popcount(0u)).toBe(0u); });
 
     it("should return 1 for powers of two", {
       expect(GameAK::Bits::popcount(1u)).toBe(1u);
@@ -111,21 +108,17 @@ int main() {
   });
 
   describe("GameAK::Bits::clz", {
-    it("should return 32 for u32 zero", {
-      expect(GameAK::Bits::clz(0u)).toBe(32u);
-    });
+    it("should return 32 for u32 zero",
+       { expect(GameAK::Bits::clz(0u)).toBe(32u); });
 
-    it("should return 31 for u32(1)", {
-      expect(GameAK::Bits::clz(1u)).toBe(31u);
-    });
+    it("should return 31 for u32(1)",
+       { expect(GameAK::Bits::clz(1u)).toBe(31u); });
 
-    it("should return 0 for u32 max", {
-      expect(GameAK::Bits::clz(0xFFFFFFFFu)).toBe(0u);
-    });
+    it("should return 0 for u32 max",
+       { expect(GameAK::Bits::clz(0xFFFFFFFFu)).toBe(0u); });
 
-    it("should return 64 for u64 zero", {
-      expect(GameAK::Bits::clz(0ull)).toBe(64u);
-    });
+    it("should return 64 for u64 zero",
+       { expect(GameAK::Bits::clz(0ull)).toBe(64u); });
 
     it("should return correct leading zeros for u32", {
       expect(GameAK::Bits::clz(0x00FFFFFFu)).toBe(8u);
@@ -140,9 +133,8 @@ int main() {
   });
 
   describe("GameAK::Bits::ctz", {
-    it("should return 32 for u32 zero", {
-      expect(GameAK::Bits::ctz(0u)).toBe(32u);
-    });
+    it("should return 32 for u32 zero",
+       { expect(GameAK::Bits::ctz(0u)).toBe(32u); });
 
     it("should return 0 for u32 odd values", {
       expect(GameAK::Bits::ctz(1u)).toBe(0u);
@@ -157,50 +149,44 @@ int main() {
       expect(GameAK::Bits::ctz(0x80000000u)).toBe(31u);
     });
 
-    it("should return 64 for u64 zero", {
-      expect(GameAK::Bits::ctz(0ull)).toBe(64u);
-    });
+    it("should return 64 for u64 zero",
+       { expect(GameAK::Bits::ctz(0ull)).toBe(64u); });
 
-    it("should return correct trailing zeros for u64", {
-      expect(GameAK::Bits::ctz(0x100000000ull)).toBe(32u);
-    });
+    it("should return correct trailing zeros for u64",
+       { expect(GameAK::Bits::ctz(0x100000000ull)).toBe(32u); });
   });
 
   describe("GameAK::Bits::rotl", {
-    it("should rotate left by 0", {
-      expect(GameAK::Bits::rotl(0x12345678u, 0)).toBe(0x12345678u);
-    });
+    it("should rotate left by 0",
+       { expect(GameAK::Bits::rotl(0x12345678u, 0)).toBe(0x12345678u); });
 
     it("should rotate left u32", {
       expect(GameAK::Bits::rotl(0x80000000u, 1)).toBe(0x1u);
       expect(GameAK::Bits::rotl(0x12345678u, 4)).toBe(0x23456781u);
     });
 
-    it("should rotate left u64", {
-      expect(GameAK::Bits::rotl(0x8000000000000000ull, 1)).toBe(0x1ull);
-    });
+    it("should rotate left u64",
+       { expect(GameAK::Bits::rotl(0x8000000000000000ull, 1)).toBe(0x1ull); });
 
-    it("[Property] rotl(x, 32) == x for u32", {
-      expect(GameAK::Bits::rotl(0x12345678u, 32)).toBe(0x12345678u);
-    });
+    it("[Property] rotl(x, 32) == x for u32",
+       { expect(GameAK::Bits::rotl(0x12345678u, 32)).toBe(0x12345678u); });
   });
 
   describe("GameAK::Bits::rotr", {
-    it("should rotate right by 0", {
-      expect(GameAK::Bits::rotr(0x12345678u, 0)).toBe(0x12345678u);
-    });
+    it("should rotate right by 0",
+       { expect(GameAK::Bits::rotr(0x12345678u, 0)).toBe(0x12345678u); });
 
     it("should rotate right u32", {
       expect(GameAK::Bits::rotr(0x1u, 1)).toBe(0x80000000u);
       expect(GameAK::Bits::rotr(0x12345678u, 4)).toBe(0x81234567u);
     });
 
-    it("should rotate right u64", {
-      expect(GameAK::Bits::rotr(0x1ull, 1)).toBe(0x8000000000000000ull);
-    });
+    it("should rotate right u64",
+       { expect(GameAK::Bits::rotr(0x1ull, 1)).toBe(0x8000000000000000ull); });
 
     it("[Property] rotl(x, n) == rotr(x, 32-n) for u32", {
-      expect(GameAK::Bits::rotl(0x12345678u, 8)).toBe(GameAK::Bits::rotr(0x12345678u, 24));
+      expect(GameAK::Bits::rotl(0x12345678u, 8))
+          .toBe(GameAK::Bits::rotr(0x12345678u, 24));
     });
   });
 
@@ -219,15 +205,13 @@ int main() {
       expect(GameAK::Bits::log2_floor(15u)).toBe(3u);
     });
 
-    it("should work for u64", {
-      expect(GameAK::Bits::log2_floor(0x100000000ull)).toBe(32u);
-    });
+    it("should work for u64",
+       { expect(GameAK::Bits::log2_floor(0x100000000ull)).toBe(32u); });
   });
 
   describe("GameAK::Bits::bit_width", {
-    it("should return 0 for zero", {
-      expect(GameAK::Bits::bit_width(0u)).toBe(0u);
-    });
+    it("should return 0 for zero",
+       { expect(GameAK::Bits::bit_width(0u)).toBe(0u); });
 
     it("should return correct bit widths", {
       expect(GameAK::Bits::bit_width(1u)).toBe(1u);
@@ -238,15 +222,13 @@ int main() {
       expect(GameAK::Bits::bit_width(256u)).toBe(9u);
     });
 
-    it("should work for u64", {
-      expect(GameAK::Bits::bit_width(0xFFFFFFFFFFFFFFFFull)).toBe(64u);
-    });
+    it("should work for u64",
+       { expect(GameAK::Bits::bit_width(0xFFFFFFFFFFFFFFFFull)).toBe(64u); });
   });
 
   describe("GameAK::Bits::bit_ceil", {
-    it("should return 1 for zero", {
-      expect(GameAK::Bits::bit_ceil(0u)).toBe(1u);
-    });
+    it("should return 1 for zero",
+       { expect(GameAK::Bits::bit_ceil(0u)).toBe(1u); });
 
     it("should round up powers of two", {
       expect(GameAK::Bits::bit_ceil(1u)).toBe(1u);
@@ -262,9 +244,8 @@ int main() {
   });
 
   describe("GameAK::Bits::bit_floor", {
-    it("should return 0 for zero", {
-      expect(GameAK::Bits::bit_floor(0u)).toBe(0u);
-    });
+    it("should return 0 for zero",
+       { expect(GameAK::Bits::bit_floor(0u)).toBe(0u); });
 
     it("should return same value for powers of two", {
       expect(GameAK::Bits::bit_floor(1u)).toBe(1u);
@@ -285,12 +266,12 @@ int main() {
       expect(GameAK::Bits::extract_bits(0xABu, 4u, 4u)).toBe(0xAu);
     });
 
-    it("should extract zero bits", {
-      expect(GameAK::Bits::extract_bits(0xFFFFu, 0u, 0u)).toBe(0u);
-    });
+    it("should extract zero bits",
+       { expect(GameAK::Bits::extract_bits(0xFFFFu, 0u, 0u)).toBe(0u); });
 
     it("should extract all bits", {
-      expect(GameAK::Bits::extract_bits(0xDEADBEEFu, 0u, 32u)).toBe(0xDEADBEEFu);
+      expect(GameAK::Bits::extract_bits(0xDEADBEEFu, 0u, 32u))
+          .toBe(0xDEADBEEFu);
     });
 
     it("[Property] extract_bits(x, off, 1) == ((x >> off) & 1)", {
@@ -321,9 +302,12 @@ int main() {
 
   describe("GameAK::Bits::reverse_bits", {
     it("should reverse u8", {
-      expect(GameAK::Bits::reverse_bits(GameAK::u8(0b10110010))).toBe(GameAK::u8(0b01001101));
-      expect(GameAK::Bits::reverse_bits(GameAK::u8(0b00000001))).toBe(GameAK::u8(0b10000000));
-      expect(GameAK::Bits::reverse_bits(GameAK::u8(0xFF))).toBe(GameAK::u8(0xFF));
+      expect(GameAK::Bits::reverse_bits(GameAK::u8(0b10110010)))
+          .toBe(GameAK::u8(0b01001101));
+      expect(GameAK::Bits::reverse_bits(GameAK::u8(0b00000001)))
+          .toBe(GameAK::u8(0b10000000));
+      expect(GameAK::Bits::reverse_bits(GameAK::u8(0xFF)))
+          .toBe(GameAK::u8(0xFF));
     });
 
     it("should reverse u32", {
@@ -332,7 +316,8 @@ int main() {
     });
 
     it("should reverse u64", {
-      expect(GameAK::Bits::reverse_bits(0x0000000000000001ull)).toBe(0x8000000000000000ull);
+      expect(GameAK::Bits::reverse_bits(0x0000000000000001ull))
+          .toBe(0x8000000000000000ull);
     });
   });
 

@@ -2,11 +2,11 @@
 #include <cest.h>
 
 enum class TestFlag : GameAK::u64 {
-  None   = 0,
-  Read   = 0,
-  Write  = 1,
-  Exec   = 2,
-  Four   = 3,
+  None = 0,
+  Read = 0,
+  Write = 1,
+  Exec = 2,
+  Four = 3,
 };
 
 int main() {
@@ -47,7 +47,8 @@ int main() {
 
     it("[Property] set(x) => has(x) for all flags", {
       GameAK::Bits::BitMask<TestFlag> mask;
-      TestFlag flags[] = {TestFlag::Read, TestFlag::Write, TestFlag::Exec, TestFlag::Four};
+      TestFlag flags[] = {TestFlag::Read, TestFlag::Write, TestFlag::Exec,
+                          TestFlag::Four};
       for (auto f : flags) {
         mask.set(f);
         expect(mask.has(f)).toBeTruthy();

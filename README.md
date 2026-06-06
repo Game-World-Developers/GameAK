@@ -58,6 +58,32 @@ Or with pkg-config:
 g++ $(pkg-config --cflags --libs GameAK) main.cpp -o main
 ```
 
+## Examples
+
+Run examples from the project root:
+
+```bash
+make examples
+./build/bin/examples/01_BitOps
+./build/bin/examples/99_AllTogether
+```
+
+The [Examples/](/Examples/) directory contains 11 compilable programs covering all modules:
+
+| # | File | Modules |
+|---|------|---------|
+| 01 | `01_BitOps.cpp` | BitOps — all primitives |
+| 02 | `02_BitMask.cpp` | BitMask — type-safe flags |
+| 03 | `03_BitArray.cpp` | BitArray — bulk ops, search, ranges |
+| 04 | `04_BitField.cpp` | BitField — compile-time bit fields |
+| 05 | `05_BitSetIterator.cpp` | BitSetIterator — iterate set bits |
+| 06 | `06_BitPack.cpp` | BitPack — bit-level serialisation |
+| 07 | `07_ArenaAllocator.cpp` | ArenaAllocator — bump allocation |
+| 08 | `08_PoolAllocator.cpp` | PoolAllocator — fixed-block pool |
+| 09 | `09_Optional.cpp` | Optional — maybe-values |
+| 10 | `10_Backend.cpp` | Backend — VTable dispatch layer |
+| 99 | `99_AllTogether.cpp` | Combined ECS-style usage |
+
 ## Modules
 
 | Module | Headers | Description |

@@ -2,49 +2,67 @@
 
 ## Summary
 
-Runtime-dispatch VTable for low-level memory and bitset operations.
-Enables transparent SIMD acceleration without recompilation or caller changes.
-Currently uses a scalar backend backed by `std::memcpy`/`memset`/`memcmp` and simple loops.
+Runtime-dispatch layer for low-level memory and bitset operations using a
+per-system `ExecutionProfile` model. No global state, no VTable indirection in
+the hot path, thread-safe by design. Enables transparent SIMD acceleration
+without recompilation or caller changes.
 
 ## Architecture
 
 ```
-User Code          Inline Wrappers         VTable            Backend Implementations
-   │                    │                     │                       │
-   ├─ Backend::mem_copy ────► g_vtable──┐──► Detail::mem_copy (memcpy)
-   ├─ Backend::mem_set  ────► g_vtable──┤──► Detail::mem_set  (memset)
-   ├─ Backend::bitset_and ───► g_vtable──┤──► Detail::bitset_and (loop)
-   └─ ...                ────► g_vtable──┘──► ...             (loop)
+System (owns ExecutionProfile)
+  │
+  ├─ p.mem.copy(...)      →  MemOps::copy     (function pointer)
+  ├─ p.mem.set(...)       →  MemOps::set
+  ├─ p.mem.cmp(...)       →  MemOps::cmp
+  │
+  ├─ p.bitset.bit_and(...) →  BitsetOps::bit_and
+  ├─ p.bitset.bit_or(...)  →  BitsetOps::bit_or
+  ├─ p.bitset.bit_xor(...) →  BitsetOps::bit_xor
+  ├─ p.bitset.bit_not(...) →  BitsetOps::bit_not
+  └─ p.bitset.popcount_range(...) → BitsetOps::popcount_range
 ```
 
-## VTable (`<AK/Backend/Backend.hpp>`)
+Each system creates or receives an `ExecutionProfile` at the start of execution
+and passes it explicitly to bulk operations. The profile lives on the stack —
+L1-hot, no pointer chasing beyond the indirect call itself.
+
+## ExecutionProfile (`<AK/Backend/ExecutionProfile.hpp>`)
 
 ### Guarantees
 
-- `init()` sets `g_vtable` to the scalar backend — always succeeds
-- inline wrappers are one-line forwarding calls through `g_vtable` — no branching beyond the function pointer call
-- function pointer signatures match `std::memcpy`, `std::memset`, `std::memcmp` for memory operations
-- bitset operations operate on `u64` arrays — no byte-level ambiguity
+- `MemOps` contains three function pointers: `copy`, `set`, `cmp`
+- `BitsetOps` contains five function pointers: `bit_and`, `bit_or`, `bit_xor`,
+  `bit_not`, `popcount_range`
+- `ExecutionProfile` aggregates `MemOps`, `BitsetOps`, and hardware capability
+  metadata (simd_width, cache_line_bytes, has_huge_pages) — fits in one cache line
+- `make_scalar_profile()` always succeeds and fills all pointers with scalar implementations
+- `make_simd_mem()` / `make_simd_bitset()` always succeed (currently delegate to scalar)
+- `init()` detects CPU features at runtime and returns the best available profile
+- Function pointer signatures match `std::memcpy`, `std::memset`, `std::memcmp`
+  for memory operations
+- Bitset operations operate on `u64` arrays — no byte-level ambiguity
+- `simd_width` is 0 for scalar, 32 for AVX2, 64 for AVX-512
+- `cache_line_bytes` is 64 on x86\_64
+- `align_to_cache(n)` rounds up to `cache_line_bytes`
 
 ### Non-Guarantees
 
-- VTable is a global variable — only one active backend at a time
-- `init()` does not perform CPU feature detection (future enhancement)
-- no validation that `g_vtable` is initialized before use
-- no thread-safe VTable swap mechanism exists
-
-### Failure Semantics
-
-- calling any wrapper before `init()` dereferences a null `g_vtable` — undefined behavior (crash)
-- `init()` has no failure path
-- passing null pointers to memory operations produces the same behavior as `std::memcpy(nullptr, ...)` — undefined behavior
+- `ExecutionProfile` is not a global — each caller manages its own profile
+- `init()` performs CPU feature detection on x86\_64 via `__builtin_cpu_supports`
+  (GCC/Clang); ARM64 detection is future work
+- No validation that function pointers are non-null before use (by design —
+  the factory functions always fill them)
+- No thread-safety mechanism needed — profiles are value types, each thread owns
+  its own copy
+- `has_huge_pages` is always `false` currently (future: /proc/meminfo check)
 
 ### Complexity
 
 | Operation | Complexity |
 |-----------|-------------|
-| `init` | O(1) |
-| inline wrapper dispatch | O(1) (indirect call through VTable) |
+| `init` | O(1) + CPUID |
+| `make_scalar_profile` | O(1) |
 | `mem_copy` | O(n) (delegated) |
 | `mem_set` | O(n) (delegated) |
 | `mem_cmp` | O(n) (delegated) |
@@ -52,52 +70,59 @@ User Code          Inline Wrappers         VTable            Backend Implementat
 
 ### Threading
 
-- `init()` must be called once before any concurrent access
-- concurrent reads from `g_vtable` after initialization are safe — VTable is immutable after init
-- concurrent writes through the VTable (e.g., `mem_copy`) follow the thread-safety rules of the underlying function
+- Fully thread-safe: each thread creates or receives its own `ExecutionProfile`
+- Concurrent reads from a shared `ExecutionProfile` are safe — it is read-only
+  after construction
+- Concurrent writes through the profile (e.g., `p.mem.copy(...)`) follow the
+  thread-safety rules of the underlying function
 
-### Valid Usage
+### Valid Usage (Standalone)
+
+```cpp
+#include <AK/Backend/Backend.hpp>
+#include <AK/Backend/ScalarBackend.hpp>
+
+void process() {
+    auto p = GameAK::Backend::make_scalar_profile();
+    p.mem.copy(dst, src, 1024);
+    p.bitset.bit_and(out, a, b, 4);
+}
+```
+
+### Valid Usage (Runtime Detection)
 
 ```cpp
 #include <AK/Backend/Backend.hpp>
 
 int main() {
-    GameAK::Backend::init();
-    // g_vtable is now set to the scalar backend
-}
-
-void process() {
-    Backend::mem_copy(dst, src, 1024);
-    Backend::bitset_and(dst, a, b, 4);
+    auto p = GameAK::Backend::init();
+    // p uses SIMD ops if AVX2 is available, scalar otherwise
+    p.mem.set(buf, 0, 256);
 }
 ```
 
-### Invalid Usage
+### Valid Usage (ECS System — Future)
 
 ```cpp
-// Calling before init:
-Backend::mem_copy(dst, src, 64); // undefined behavior: g_vtable is null
+struct MySystem : System {
+    void execute(ExecContext &ctx) noexcept override {
+        for (auto [e, layer] : ctx.world.query<BitLayer>()) {
+            layer.clear_all(ctx.profile);
+        }
+    }
+};
 ```
 
 ### Invariants
 
-- `g_vtable` is non-null after `init()` returns
-- VTable function pointers are never null in `kScalarVTable`
-- `g_vtable->type` is `Type::Scalar` after `init()`
-
-### Integration Notes
-
-- consumed by `BitArray` for bulk operations (`reset`, `and_with`, `or_with`, `xor_with`, `negate`, `popcount`)
-- SIMD backend can be added by defining a second VTable and selecting it in `init()` — no caller changes required
-- `kScalarVTable` is `constexpr` — stored in read-only data
-
----
+- All function pointers in a profile returned by `make_scalar_profile()` are non-null
+- All function pointers in a profile returned by `init()` are non-null
+- `bit_not(bit_not(x)) == x`
+- `popcount_range` agrees with `Bits::popcount` per word
 
 ## Scalar Backend (`<AK/Backend/ScalarBackend.hpp>`)
 
-### Summary
-
-Default backend implementation in `GameAK::Backend::Detail`.
+Default backend implementation in `GameAK::Backend::Detail::Scalar`.
 Memory operations delegate to CRT functions; bitset operations use simple loops.
 
 ### Guarantees
@@ -105,22 +130,25 @@ Memory operations delegate to CRT functions; bitset operations use simple loops.
 - `mem_copy` delegates to `std::memcpy` — same behavior and aliasing rules
 - `mem_set` delegates to `std::memset`
 - `mem_cmp` delegates to `std::memcmp`
-- bitset operations are deterministic — `bitset_popcount_range` uses `Bits::popcount` per word
+- Bitset operations are deterministic — `bitset_popcount_range` uses
+  `Bits::popcount` per word
 
 ### Non-Guarantees
 
-- bitset loops are scalar — not vectorized by the backend itself (compiler may auto-vectorize)
-- no alignment assumptions for input arrays beyond natural `u64` alignment
+- Bitset loops are scalar — not vectorized by the backend itself
+  (compiler may auto-vectorize)
+- No alignment assumptions for input arrays beyond natural `u64` alignment
 
-### Valid Usage
+## Migration from VTable (Legacy)
 
-```cpp
-u64 dst[4] = {};
-u64 src[4] = {1, 2, 3, 4};
-Detail::bitset_or(dst, src, src, 4);
-```
+The previous design used a global `g_vtable` with indirect calls through a
+`VTable` struct. The new design replaces it with:
 
-### Invariants
-
-- `kScalarVTable` is `inline constexpr` — one definition across translation units
-- `kScalarVTable.simd_width == 0`
+1. **No global state** — each caller owns an `ExecutionProfile` on the stack
+2. **Sub-tables by category** — `MemOps` and `BitsetOps` prevent cache line
+   pollution when only one category is used
+3. **Runtime detection** — `init()` uses `__builtin_cpu_supports` on x86\_64
+   to select SIMD backend when available
+4. **Thread safety** — no shared mutable state
+5. **Explicit parameter** — `const ExecutionProfile &p` is passed to bulk
+   operations on `BitArray` and `BitLayer`

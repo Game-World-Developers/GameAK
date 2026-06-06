@@ -20,7 +20,7 @@ namespace GameAK::Bits {
 /// Lightweight forward iterator over set bits in a u64 array.
 class BitSetIterator {
 public:
-  BitSetIterator(const u64* data, usize words) noexcept
+  BitSetIterator(const u64 *data, usize words) noexcept
       : m_data(data), m_words(words), m_current(0) {}
 
   /// Returns the index of the next set bit, or @p words*64 if none.
@@ -28,7 +28,8 @@ public:
     usize word_idx = m_current / 64;
     usize offset = m_current % 64;
 
-    if (word_idx >= m_words) return m_words * 64;
+    if (word_idx >= m_words)
+      return m_words * 64;
 
     // Check remainder of current word
     u64 word = m_data[word_idx] & (~u64(0) << offset);
@@ -56,7 +57,7 @@ public:
   usize tell() const noexcept { return m_current; }
 
 private:
-  const u64* m_data;
+  const u64 *m_data;
   usize m_words;
   usize m_current;
 };

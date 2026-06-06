@@ -17,8 +17,7 @@ namespace GameAK::Bits {
 /// @tparam T       Unsigned integer type of the container word.
 /// @tparam Offset  Bit position of the field (0 = LSB).
 /// @tparam Width   Number of bits in the field (must be > 0).
-template <typename T, usize Offset, usize Width>
-class BitField {
+template <typename T, usize Offset, usize Width> class BitField {
   static_assert(Width > 0, "BitField width must be > 0");
   static_assert(Offset + Width <= sizeof(T) * 8,
                 "BitField exceeds the bit-width of T");

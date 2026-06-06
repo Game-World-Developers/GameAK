@@ -9,9 +9,8 @@ constexpr bool kArch64Bit = false;
 
 int main() {
   describe("GameAK::ArchDetect", {
-    it("should detect a 64-bit architecture", {
-      expect(kArch64Bit).toBeTruthy();
-    });
+    it("should detect a 64-bit architecture",
+       { expect(kArch64Bit).toBeTruthy(); });
   });
 
   return cest_result();

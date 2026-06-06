@@ -46,7 +46,8 @@ int main() {
     });
 
     it("[Edge] EnableIf with void default works for SFINAE", {
-      auto check_int = [](auto x) -> GameAK::EnableIf<GameAK::IsIntegral<decltype(x)>> {
+      auto check_int =
+          [](auto x) -> GameAK::EnableIf<GameAK::IsIntegral<decltype(x)>> {
         (void)x;
       };
       check_int(42);
@@ -55,7 +56,8 @@ int main() {
     it("should have correct IntegralConstant value and types", {
       static_assert(GameAK::IntegralConstant<int, 42>::value == 42);
       static_assert(GameAK::IntegralConstant<bool, true>::value);
-      static_assert(std::is_same_v<GameAK::IntegralConstant<int, 0>::value_type, int>);
+      static_assert(
+          std::is_same_v<GameAK::IntegralConstant<int, 0>::value_type, int>);
       constexpr auto ic = GameAK::IntegralConstant<int, 99>{};
       static_assert(ic() == 99);
       int converted = GameAK::IntegralConstant<int, 77>{};
@@ -72,19 +74,30 @@ int main() {
     it("should correctly use TypeIdentity", {
       static_assert(std::is_same_v<GameAK::TypeIdentity<int>::type, int>);
       static_assert(std::is_same_v<GameAK::TypeIdentity<float>::type, float>);
-      expect((std::is_same_v<GameAK::TypeIdentity<int>::type, int>)).toBeTruthy();
-      expect((std::is_same_v<GameAK::TypeIdentity<float>::type, float>)).toBeTruthy();
+      expect((std::is_same_v<GameAK::TypeIdentity<int>::type, int>))
+          .toBeTruthy();
+      expect((std::is_same_v<GameAK::TypeIdentity<float>::type, float>))
+          .toBeTruthy();
     });
 
     it("should correctly select types with Conditional", {
-      static_assert(std::is_same_v<GameAK::Conditional<true, int, float>::type, int>);
-      static_assert(std::is_same_v<GameAK::Conditional<false, int, float>::type, float>);
-      static_assert(std::is_same_v<GameAK::ConditionalT<true, int, float>, int>);
-      static_assert(std::is_same_v<GameAK::ConditionalT<false, int, float>, float>);
-      expect((std::is_same_v<GameAK::Conditional<true, int, float>::type, int>)).toBeTruthy();
-      expect((std::is_same_v<GameAK::Conditional<false, int, float>::type, float>)).toBeTruthy();
-      expect((std::is_same_v<GameAK::ConditionalT<true, int, float>, int>)).toBeTruthy();
-      expect((std::is_same_v<GameAK::ConditionalT<false, int, float>, float>)).toBeTruthy();
+      static_assert(
+          std::is_same_v<GameAK::Conditional<true, int, float>::type, int>);
+      static_assert(
+          std::is_same_v<GameAK::Conditional<false, int, float>::type, float>);
+      static_assert(
+          std::is_same_v<GameAK::ConditionalT<true, int, float>, int>);
+      static_assert(
+          std::is_same_v<GameAK::ConditionalT<false, int, float>, float>);
+      expect((std::is_same_v<GameAK::Conditional<true, int, float>::type, int>))
+          .toBeTruthy();
+      expect(
+          (std::is_same_v<GameAK::Conditional<false, int, float>::type, float>))
+          .toBeTruthy();
+      expect((std::is_same_v<GameAK::ConditionalT<true, int, float>, int>))
+          .toBeTruthy();
+      expect((std::is_same_v<GameAK::ConditionalT<false, int, float>, float>))
+          .toBeTruthy();
     });
 
     it("should correctly check type equality with IsSame", {

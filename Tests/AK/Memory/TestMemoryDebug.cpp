@@ -54,9 +54,9 @@ int main() {
       GameAK::u8 buf[64];
       GameAK::Memory::Debug::validate_pointer_in_range(buf, buf, sizeof(buf));
       GameAK::Memory::Debug::validate_pointer_in_range(buf + 32, buf,
-                                                        sizeof(buf));
+                                                       sizeof(buf));
       GameAK::Memory::Debug::validate_pointer_in_range(buf + 63, buf,
-                                                        sizeof(buf));
+                                                       sizeof(buf));
       expect(true).toBeTruthy();
     });
 
@@ -81,16 +81,15 @@ int main() {
         expect(true).toBeTruthy();
       });
 
-      it("[Debug] validate_offset should trap when offset exceeds capacity",
-         {
-           SavedSigaction saved;
-           saved.install();
-           if (sigsetjmp(trap_jmp_buf, 1) == 0) {
-             GameAK::Memory::Debug::validate_offset(1025, 1024);
-           }
-           saved.restore();
-           expect(true).toBeTruthy();
-         });
+      it("[Debug] validate_offset should trap when offset exceeds capacity", {
+        SavedSigaction saved;
+        saved.install();
+        if (sigsetjmp(trap_jmp_buf, 1) == 0) {
+          GameAK::Memory::Debug::validate_offset(1025, 1024);
+        }
+        saved.restore();
+        expect(true).toBeTruthy();
+      });
 
       it("[Debug] validate_pointer_in_range should trap for pointer before "
          "buffer",
@@ -101,7 +100,7 @@ int main() {
            GameAK::u8 before = 0;
            if (sigsetjmp(trap_jmp_buf, 1) == 0) {
              GameAK::Memory::Debug::validate_pointer_in_range(&before, buf,
-                                                               sizeof(buf));
+                                                              sizeof(buf));
            }
            saved.restore();
            expect(true).toBeTruthy();
@@ -115,7 +114,7 @@ int main() {
            GameAK::u8 buf[64];
            if (sigsetjmp(trap_jmp_buf, 1) == 0) {
              GameAK::Memory::Debug::validate_pointer_in_range(buf + 64, buf,
-                                                               sizeof(buf));
+                                                              sizeof(buf));
            }
            saved.restore();
            expect(true).toBeTruthy();
@@ -134,14 +133,13 @@ int main() {
         expect(true).toBeTruthy();
       });
 
-      it("[Release] validate_pointer_in_range is no-op for invalid pointers",
-         {
-           GameAK::u8 buf[64];
-           GameAK::u8 outside = 0;
-           GameAK::Memory::Debug::validate_pointer_in_range(&outside, buf,
-                                                             sizeof(buf));
-           expect(true).toBeTruthy();
-         });
+      it("[Release] validate_pointer_in_range is no-op for invalid pointers", {
+        GameAK::u8 buf[64];
+        GameAK::u8 outside = 0;
+        GameAK::Memory::Debug::validate_pointer_in_range(&outside, buf,
+                                                         sizeof(buf));
+        expect(true).toBeTruthy();
+      });
     }
 
     it("[Invariant] debug_assert compiles with any callable returning bool", {

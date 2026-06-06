@@ -16,10 +16,9 @@ PoolAllocator::PoolAllocator(void *buffer, usize capacity, usize block_size,
     return;
   }
 
-  const bool size_valid =
-      (block_size >= sizeof(void *))
-      && ((block_size % block_alignment) == 0U)
-      && Bits::is_power_of_two(block_size);
+  const bool size_valid = (block_size >= sizeof(void *)) &&
+                          ((block_size % block_alignment) == 0U) &&
+                          Bits::is_power_of_two(block_size);
 
   if (GAMEAK_UNLIKELY(!size_valid)) {
     GAMEAK_DEBUG_BREAK();
@@ -84,17 +83,15 @@ void PoolAllocator::release(void *ptr) noexcept {
     return;
   }
 
-#if defined(GAMEAK_DEBUG_VALIDATE)
   {
     void *curr = m_free_head;
     while (curr != nullptr) {
       if (GAMEAK_UNLIKELY(curr == ptr)) {
-        return; // double-release: already in free list, no-op
+        return;
       }
       curr = *static_cast<void **>(curr);
     }
   }
-#endif
 
   *static_cast<void **>(ptr) = m_free_head;
   m_free_head = ptr;
@@ -102,7 +99,8 @@ void PoolAllocator::release(void *ptr) noexcept {
 }
 
 void PoolAllocator::reset() noexcept {
-  if (m_block_count == 0U) return;
+  if (m_block_count == 0U)
+    return;
   m_free_count = m_block_count;
   init_free_list();
 }

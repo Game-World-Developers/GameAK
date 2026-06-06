@@ -64,19 +64,22 @@ template <typename T>
 }
 
 /// Counts the number of set (1) bits in @p value (population count).
-///
-/// Uses the Brian Kernighan algorithm: iterates once per set bit.
-///
-/// @tparam T  Unsigned integer type.
-/// @param value  Input value.
-/// @return        Number of bits set to 1.
+/// Uses __builtin_popcountll at runtime when available, falls back to a
+/// constexpr-friendly Kernighan loop in constant-evaluation contexts.
 template <typename T> [[nodiscard]] constexpr T popcount(T value) noexcept {
+#if defined(__GNUC__) || defined(__clang__)
+  if (!__builtin_is_constant_evaluated()) {
+    if constexpr (sizeof(T) <= sizeof(unsigned int))
+      return T(__builtin_popcount((unsigned int)value));
+    else
+      return T(__builtin_popcountll((unsigned long long)value));
+  }
+#endif
   T count = 0;
   while (value) {
     value &= (value - 1);
     ++count;
   }
-
   return count;
 }
 /// Counts the number of leading zero bits in @p value.
@@ -88,7 +91,8 @@ template <typename T> [[nodiscard]] constexpr T popcount(T value) noexcept {
 /// @return        Number of leading zero bits.
 template <typename T> [[nodiscard]] constexpr T clz(T value) noexcept {
   constexpr usize kBits = sizeof(T) * 8;
-  if (value == 0) return T(kBits);
+  if (value == 0)
+    return T(kBits);
   if constexpr (kBits <= 32) {
     return T(__builtin_clz((u32)(value)) - (32 - kBits));
   } else {
@@ -105,7 +109,8 @@ template <typename T> [[nodiscard]] constexpr T clz(T value) noexcept {
 /// @return        Number of trailing zero bits.
 template <typename T> [[nodiscard]] constexpr T ctz(T value) noexcept {
   constexpr usize kBits = sizeof(T) * 8;
-  if (value == 0) return T(kBits);
+  if (value == 0)
+    return T(kBits);
   if constexpr (kBits <= 32) {
     return T(__builtin_ctz((u32)(value)));
   } else {
@@ -119,10 +124,12 @@ template <typename T> [[nodiscard]] constexpr T ctz(T value) noexcept {
 /// @param value   Value to rotate.
 /// @param shift   Number of bits to rotate left.
 /// @return        Rotated value.
-template <typename T> [[nodiscard]] constexpr T rotl(T value, int shift) noexcept {
+template <typename T>
+[[nodiscard]] constexpr T rotl(T value, int shift) noexcept {
   constexpr int kBits = int(sizeof(T) * 8);
   shift &= (kBits - 1);
-  if (shift == 0) return value;
+  if (shift == 0)
+    return value;
   return T((value << shift) | (value >> (kBits - shift)));
 }
 
@@ -132,10 +139,12 @@ template <typename T> [[nodiscard]] constexpr T rotl(T value, int shift) noexcep
 /// @param value   Value to rotate.
 /// @param shift   Number of bits to rotate right.
 /// @return        Rotated value.
-template <typename T> [[nodiscard]] constexpr T rotr(T value, int shift) noexcept {
+template <typename T>
+[[nodiscard]] constexpr T rotr(T value, int shift) noexcept {
   constexpr int kBits = int(sizeof(T) * 8);
   shift &= (kBits - 1);
-  if (shift == 0) return value;
+  if (shift == 0)
+    return value;
   return T((value >> shift) | (value << (kBits - shift)));
 }
 
@@ -165,7 +174,8 @@ template <typename T> [[nodiscard]] constexpr T bit_width(T value) noexcept {
 /// @param value  Input value.
 /// @return       ceil(log2(value)) as a power of two.
 template <typename T> [[nodiscard]] constexpr T bit_ceil(T value) noexcept {
-  if (value == 0) return T(1);
+  if (value == 0)
+    return T(1);
   return T(1) << bit_width(T(value - 1));
 }
 
@@ -177,7 +187,8 @@ template <typename T> [[nodiscard]] constexpr T bit_ceil(T value) noexcept {
 /// @param value  Input value.
 /// @return       floor(log2(value)) as a power of two.
 template <typename T> [[nodiscard]] constexpr T bit_floor(T value) noexcept {
-  if (value == 0) return T(0);
+  if (value == 0)
+    return T(0);
   return T(1) << (bit_width(value) - 1);
 }
 
@@ -192,7 +203,8 @@ template <typename T> [[nodiscard]] constexpr T bit_floor(T value) noexcept {
 /// @param count   Number of bits to extract.
 /// @return        Extracted bit range in low bits.
 template <typename T>
-[[nodiscard]] constexpr T extract_bits(T value, usize offset, usize count) noexcept {
+[[nodiscard]] constexpr T extract_bits(T value, usize offset,
+                                       usize count) noexcept {
   return (value >> offset) & mask(T(count));
 }
 
@@ -207,7 +219,8 @@ template <typename T>
 /// @param count   Number of bits to insert.
 /// @return        Value with the bit-range replaced.
 template <typename T>
-[[nodiscard]] constexpr T insert_bits(T value, T bits, usize offset, usize count) noexcept {
+[[nodiscard]] constexpr T insert_bits(T value, T bits, usize offset,
+                                      usize count) noexcept {
   T m = mask(T(count));
   return (value & ~(m << offset)) | ((bits & m) << offset);
 }

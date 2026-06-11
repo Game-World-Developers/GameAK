@@ -24,7 +24,7 @@ void typed_handler(const TestPayload &data, GameAK::ExecContext &) {
 
 void event_data_handler(const GameAK::EventLoop::Event &e,
                         GameAK::ExecContext &) {
-  auto &data = GameAK::EventLoop::event_data<TestPayload>(e);
+  auto data = GameAK::EventLoop::event_data<TestPayload>(e);
   g_last_a = data.a;
   g_last_b = data.b;
 }

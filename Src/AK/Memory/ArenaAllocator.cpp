@@ -25,6 +25,11 @@ void *ArenaAllocator::allocate(usize size, usize alignment) noexcept {
     return nullptr;
   }
 
+  Memory::Debug::debug_assert([this] {
+    auto *self = reinterpret_cast<const u8 *>(this);
+    return self < m_buffer || self >= m_buffer + m_capacity;
+  });
+
   auto result = alloc_impl(size, alignment);
   if (GAMEAK_UNLIKELY(!result)) {
     return nullptr;

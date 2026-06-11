@@ -16,11 +16,22 @@ struct Event {
   u64 data[2];
 };
 
-using Handler = void (*)(const Event &, ExecContext &);
+using RawHandler = void (*)(const Event &, ExecContext &);
+
+struct TypedSlot {
+  void (*invoke)(const Event &, ExecContext &, void *);
+  void *fn;
+};
+
+union HandlerUnion {
+  RawHandler raw;
+  TypedSlot typed;
+};
 
 struct Subscription {
   u32 type;
-  Handler handler;
+  HandlerUnion handler;
+  bool is_typed;
 };
 
 class EventBus {
@@ -31,14 +42,28 @@ public:
         m_head(0), m_tail(0),
         m_sub_count(0) {}
 
-  void subscribe(u32 type, Handler handler) noexcept {
+  void subscribe(u32 type, RawHandler handler) noexcept {
     for (usize i = 0; i < m_sub_count; ++i) {
-      if (m_subs[i].type == type && m_subs[i].handler == handler)
+      if (!m_subs[i].is_typed && m_subs[i].type == type &&
+          m_subs[i].handler.raw == handler)
         return;
     }
     if (GAMEAK_LIKELY(m_sub_count < kDefaultSubscriberCount)) {
       m_subs[m_sub_count].type = type;
-      m_subs[m_sub_count].handler = handler;
+      m_subs[m_sub_count].handler.raw = handler;
+      m_subs[m_sub_count].is_typed = false;
+      ++m_sub_count;
+    }
+  }
+
+  void subscribe(const Subscription &sub) noexcept {
+    for (usize i = 0; i < m_sub_count; ++i) {
+      if (m_subs[i].is_typed && m_subs[i].type == sub.type &&
+          m_subs[i].handler.typed.fn == sub.handler.typed.fn)
+        return;
+    }
+    if (GAMEAK_LIKELY(m_sub_count < kDefaultSubscriberCount)) {
+      m_subs[m_sub_count] = sub;
       ++m_sub_count;
     }
   }
@@ -55,8 +80,13 @@ public:
     while (m_tail != m_head) {
       const Event &e = m_events[m_tail];
       for (usize i = 0; i < m_sub_count; ++i) {
-        if (m_subs[i].type == e.type)
-          m_subs[i].handler(e, ctx);
+        if (m_subs[i].type == e.type) {
+          if (m_subs[i].is_typed) {
+            m_subs[i].handler.typed.invoke(e, ctx, m_subs[i].handler.typed.fn);
+          } else {
+            m_subs[i].handler.raw(e, ctx);
+          }
+        }
       }
       m_tail = (m_tail + 1) % kDefaultEventCapacity;
     }
@@ -79,9 +109,11 @@ private:
 };
 
 template <typename T>
-const T &event_data(const Event &e) noexcept {
+T event_data(const Event &e) noexcept {
   static_assert(sizeof(T) <= sizeof(e.data));
-  return *reinterpret_cast<const T *>(e.data);
+  T result;
+  __builtin_memcpy(&result, e.data, sizeof(T));
+  return result;
 }
 
 template <typename T>
@@ -96,24 +128,21 @@ void publish(EventBus &bus, u32 type, const T &data) noexcept {
 namespace Detail {
 
 template <typename T>
-struct TypedHandler {
-  using Fn = void (*)(const T &, ExecContext &);
-  static Fn s_handler;
-
-  static void trampoline(const Event &e, ExecContext &ctx) noexcept {
-    s_handler(event_data<T>(e), ctx);
-  }
-};
-
-template <typename T>
-typename TypedHandler<T>::Fn TypedHandler<T>::s_handler = nullptr;
+void typed_invoke(const Event &e, ExecContext &ctx, void *fn) noexcept {
+  auto handler = reinterpret_cast<void (*)(const T &, ExecContext &)>(fn);
+  handler(event_data<T>(e), ctx);
+}
 
 } // namespace Detail
 
 template <typename T>
 void subscribe(EventBus &bus, u32 type, void (*handler)(const T &, ExecContext &)) noexcept {
-  Detail::TypedHandler<T>::s_handler = handler;
-  bus.subscribe(type, Detail::TypedHandler<T>::trampoline);
+  Subscription sub;
+  sub.type = type;
+  sub.handler.typed.invoke = &Detail::typed_invoke<T>;
+  sub.handler.typed.fn = reinterpret_cast<void *>(handler);
+  sub.is_typed = true;
+  bus.subscribe(sub);
 }
 
 } // namespace GameAK::EventLoop

@@ -20,6 +20,9 @@ namespace GameAK::Bits {
 /// @tparam Enum  Enum type whose values name individual flag bits.
 ///               The underlying integer must fit within u64.
 template <typename Enum> class BitMask {
+  static_assert(sizeof(Enum) <= sizeof(u64),
+                "Enum underlying type must fit in u64");
+
 public:
   using UnderlyingType = u64;
 

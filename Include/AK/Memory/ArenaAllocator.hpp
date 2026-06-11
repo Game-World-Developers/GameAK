@@ -13,6 +13,11 @@
 /// Allocation is O(1): a single aligned bump of the internal offset.
 /// Individual deallocation is not supported. Memory is reclaimed via
 /// reset() or through checkpoint/restore pairs for scoped lifetimes.
+///
+/// @warning The allocator object itself must NOT be placed inside its own
+/// backing buffer (e.g. via placement-new). The first allocation would
+/// overwrite m_buffer, m_capacity, and m_offset, causing silent corruption.
+/// In debug builds, allocate() asserts that this is not the case.
 
 #pragma once
 

@@ -1,4 +1,3 @@
-#include <AK/Core/Bits/BitOps.hpp>
 #include <AK/Core/Macros.hpp>
 #include <AK/Memory/MemoryDebug.hpp>
 #include <AK/Memory/PoolAllocator.hpp>
@@ -17,8 +16,7 @@ PoolAllocator::PoolAllocator(void *buffer, usize capacity, usize block_size,
   }
 
   const bool size_valid = (block_size >= sizeof(void *)) &&
-                          ((block_size % block_alignment) == 0U) &&
-                          Bits::is_power_of_two(block_size);
+                          ((block_size % block_alignment) == 0U);
 
   if (GAMEAK_UNLIKELY(!size_valid)) {
     GAMEAK_DEBUG_BREAK();
@@ -58,7 +56,7 @@ bool PoolAllocator::is_valid_block(const void *ptr) const noexcept {
   }
 
   const usize offset = static_cast<usize>(own_ptr - m_buffer);
-  return (offset & (m_block_size - 1)) == 0U;
+  return (offset % m_block_size) == 0U;
 }
 
 void *PoolAllocator::acquire() noexcept {

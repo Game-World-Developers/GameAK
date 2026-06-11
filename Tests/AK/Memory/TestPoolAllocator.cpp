@@ -310,34 +310,25 @@ int main() {
       expect(pool.owns(misaligned)).toBeFalsy();
     });
 
-    it("[Critical Bug: PoolAllocator::is_valid_block non-power-of-two "
-       "block_size]",
-       {
-         GameAK::byte buffer[256];
+    it("[Edge: PoolAllocator non-power-of-two block_size]", {
+      GameAK::byte buffer[256];
 
-         GameAK::PoolAllocator pool_valid_32(buffer, sizeof(buffer), 32, 8);
-         expect(pool_valid_32.block_count()).toBe(8UL);
+      GameAK::PoolAllocator pool(buffer, sizeof(buffer), 48, 16);
+      expect(pool.block_count()).toBe(5UL);
+      expect(pool.block_size()).toBe(48UL);
+      expect(pool.free_count()).toBe(5UL);
 
-         GameAK::PoolAllocator pool_valid_64(buffer, sizeof(buffer), 64, 16);
-         expect(pool_valid_64.block_count()).toBe(4UL);
+      void *b1 = pool.acquire();
+      void *b2 = pool.acquire();
+      expect(b1 != nullptr).toBeTruthy();
+      expect(b2 != nullptr).toBeTruthy();
+      expect(pool.owns(b1)).toBeTruthy();
+      expect(pool.owns(b2)).toBeTruthy();
 
-         SavedSigaction saved;
-         saved.install();
-
-         alignas(GameAK::PoolAllocator)
-             GameAK::byte pool_storage[sizeof(GameAK::PoolAllocator)];
-
-         if (sigsetjmp(trap_jmp_buf, 1) == 0) {
-           new (pool_storage)
-               GameAK::PoolAllocator(buffer, sizeof(buffer), 48, 16);
-         }
-
-         saved.restore();
-
-         GameAK::PoolAllocator *pool_48 =
-             reinterpret_cast<GameAK::PoolAllocator *>(pool_storage);
-         expect(pool_48->block_count()).toBe(0UL);
-       });
+      pool.release(b1);
+      pool.release(b2);
+      expect(pool.is_empty()).toBeTruthy();
+    });
 
     it("[Critical Bug: PoolAllocator: acquire-release-acquire-release cíclico "
        "(1000x)]",

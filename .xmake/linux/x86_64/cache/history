@@ -59,6 +59,10 @@
         "xmake build gameak_test",
         "xmake run gameak_test",
         "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
         "xmake run gameak_test"
     }
 }

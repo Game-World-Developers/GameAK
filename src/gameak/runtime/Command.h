@@ -21,6 +21,7 @@ enum class CommandType : uint32_t {
     CreateBlock,
     DestroyBlock,
     SetField,
+    ResizeBlock,
 };
 
 struct CommandCreateBlock {
@@ -37,7 +38,12 @@ struct CommandSetField {
     std::vector<std::byte> data;
 };
 
-using CommandPayload = std::variant<CommandCreateBlock, CommandDestroyBlock, CommandSetField>;
+struct CommandResizeBlock {
+    std::vector<core::Identity> targets;
+    size_t new_size;
+};
+
+using CommandPayload = std::variant<CommandCreateBlock, CommandDestroyBlock, CommandSetField, CommandResizeBlock>;
 
 class Command {
 public:

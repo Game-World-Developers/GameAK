@@ -33,6 +33,18 @@ core::Result<void> FifoScheduler::validate(
             }
             return {};
         }
+        case CommandType::ResizeBlock: {
+            const auto& payload = std::get<CommandResizeBlock>(command.payload());
+            for (auto target : payload.targets) {
+                if (!target.is_valid()) {
+                    return core::Error{core::ErrorCode::InvalidIdentity, "Target identity is invalid"};
+                }
+                if (!blocks.contains(target)) {
+                    return core::Error{core::ErrorCode::BlockNotFound, "Target block not found"};
+                }
+            }
+            return {};
+        }
         case CommandType::SetField: {
             const auto& payload = std::get<CommandSetField>(command.payload());
             for (auto target : payload.targets) {
@@ -75,6 +87,17 @@ core::Result<void> FifoScheduler::execute(
             const auto& payload = std::get<CommandDestroyBlock>(command.payload());
             for (auto target : payload.targets) {
                 blocks.erase(target);
+            }
+            return {};
+        }
+        case CommandType::ResizeBlock: {
+            const auto& payload = std::get<CommandResizeBlock>(command.payload());
+            for (auto target : payload.targets) {
+                auto it = blocks.find(target);
+                if (it == blocks.end()) {
+                    return core::Error{core::ErrorCode::BlockNotFound};
+                }
+                it->second.resize(payload.new_size);
             }
             return {};
         }

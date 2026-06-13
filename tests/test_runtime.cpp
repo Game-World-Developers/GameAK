@@ -201,6 +201,43 @@ int main(int argc, char* argv[]) {
             expect(rt.has_block(b2.value())).toBeTruthy();
         });
 
+        it("resizes a block and writes beyond original size", {
+            Runtime rt;
+            BlockTypeDescriptor desc;
+            desc.type_id = 1;
+            desc.size = sizeof(int);
+            desc.alignment = alignof(int);
+            desc.name = "test";
+            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+            auto block = rt.create_block(1);
+            expect(block.has_value()).toBeTruthy();
+
+            auto resize = rt.submit_command(
+                Command{CommandResizeBlock{{block.value()}, sizeof(int) * 2}});
+            expect(resize.has_value()).toBeTruthy();
+            rt.tick();
+            expect(rt.blocks().at(block.value()).size() == sizeof(int) * 2).toBeTruthy();
+
+            int value = 99;
+            auto bytes = std::vector<std::byte>(
+                reinterpret_cast<std::byte*>(&value),
+                reinterpret_cast<std::byte*>(&value) + sizeof(int));
+
+            auto set = rt.submit_command(
+                Command{CommandSetField{{block.value()}, sizeof(int), bytes}});
+            expect(set.has_value()).toBeTruthy();
+
+            auto result = rt.tick();
+            expect(result.status == ExecutionStatus::Success).toBeTruthy();
+
+            int stored;
+            std::memcpy(&stored,
+                        static_cast<const std::byte*>(rt.blocks().at(block.value()).data()) + sizeof(int),
+                        sizeof(int));
+            expect(stored).toEqual(99);
+        });
+
         it("rejects command for unregistered type", {
             Runtime rt;
             auto submit = rt.submit_command(Command{CommandCreateBlock{1}});

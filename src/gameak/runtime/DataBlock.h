@@ -20,6 +20,8 @@ public:
     void* data() { return data_.data(); }
     const void* data() const { return data_.data(); }
 
+    void resize(size_t new_size) { data_.resize(new_size); }
+
 private:
     core::Identity identity_;
     uint32_t type_id_;

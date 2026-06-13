@@ -29,6 +29,7 @@ struct TestNode : gameak::core::intrusive_node {
 using TestList = gameak::core::intrusive_list<TestNode>;
 using AVLTreeIntStr = gameak::core::avl_tree<int, std::string>;
 using RBTreeIntStr = gameak::core::rb_tree<int, std::string>;
+using DefaultRuntime = gameak::runtime::Runtime<gameak::runtime::FifoScheduler>;
 
 static void avl_rotation_test(const int* keys, int n) {
     AVLTreeIntStr tree;
@@ -202,7 +203,7 @@ int main(int argc, char* argv[]) {
 
     describe("Runtime", {
         it("creates and destroys a block", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -221,14 +222,14 @@ int main(int argc, char* argv[]) {
         });
 
         it("fails to create block with unregistered type", {
-            Runtime rt;
+            DefaultRuntime rt;
             auto block = rt.create_block(99);
             expect(block.has_value()).toBeFalsy();
             expect(block.error().code() == ErrorCode::TypeNotRegistered).toBeTruthy();
         });
 
         it("rejects duplicate type registration", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             auto r1 = rt.register_block_type(desc);
@@ -241,7 +242,7 @@ int main(int argc, char* argv[]) {
 
     describe("Commands", {
         it("creates a block via command", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -259,7 +260,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("destroys a block via command", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -280,7 +281,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("writes field data via command", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -313,7 +314,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("destroys multiple blocks with one command", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -337,7 +338,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("resizes a block and writes beyond original size", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -374,7 +375,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("rejects command for unregistered type", {
-            Runtime rt;
+            DefaultRuntime rt;
             auto submit = rt.submit_command(Command{CommandCreateBlock{1}});
             expect(submit.has_value()).toBeTruthy();
             auto result = rt.tick();
@@ -385,7 +386,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("cancels a pending command", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -404,7 +405,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("cancels one command, executes another", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -425,7 +426,7 @@ int main(int argc, char* argv[]) {
 
     describe("Controllers", {
         it("creates a block via controller", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -450,7 +451,7 @@ int main(int argc, char* argv[]) {
         });
 
         it("produces multiple commands in one tick", {
-            Runtime rt;
+            DefaultRuntime rt;
             BlockTypeDescriptor desc;
             desc.type_id = 1;
             desc.size = sizeof(int);
@@ -479,14 +480,14 @@ int main(int argc, char* argv[]) {
 
     describe("Error Handling", {
         it("fails to destroy invalid identity", {
-            Runtime rt;
+            DefaultRuntime rt;
             auto destroy = rt.destroy_block(Identity::invalid());
             expect(destroy.has_value()).toBeFalsy();
             expect(destroy.error().code() == ErrorCode::InvalidIdentity).toBeTruthy();
         });
 
         it("fails to destroy nonexistent block", {
-            Runtime rt;
+            DefaultRuntime rt;
             auto destroy = rt.destroy_block(Identity{999});
             expect(destroy.has_value()).toBeFalsy();
             expect(destroy.error().code() == ErrorCode::BlockNotFound).toBeTruthy();

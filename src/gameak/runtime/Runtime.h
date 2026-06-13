@@ -3,25 +3,19 @@
 #include "BlockType.h"
 #include "Command.h"
 #include "Controller.h"
-#include "Scheduler.h"
+#include "FifoScheduler.h"
 #include "gameak/core/Identity.h"
 #include "gameak/core/Result.h"
 
 #include <cstdint>
-#include <memory>
+#include <spdlog/spdlog.h>
 #include <unordered_map>
 #include <vector>
 
 namespace gameak::runtime {
 
 enum class LogLevel : uint32_t {
-    Trace,
-    Debug,
-    Info,
-    Warn,
-    Error,
-    Critical,
-    Off,
+    Trace, Debug, Info, Warn, Error, Critical, Off,
 };
 
 struct RuntimeConfig {
@@ -42,6 +36,7 @@ struct TickResult {
     std::vector<RejectedCommand> rejected_commands;
 };
 
+template <typename SchedulerType = FifoScheduler>
 class Runtime {
 public:
     explicit Runtime(RuntimeConfig config = {});
@@ -71,8 +66,8 @@ public:
 
     const RuntimeConfig& config() const { return config_; }
 
-    Scheduler& scheduler() { return *scheduler_; }
-    const Scheduler& scheduler() const { return *scheduler_; }
+    SchedulerType& scheduler() { return scheduler_; }
+    const SchedulerType& scheduler() const { return scheduler_; }
     const std::unordered_map<core::Identity, DataBlock>& blocks() const { return blocks_; }
     std::unordered_map<core::Identity, DataBlock>& mutable_blocks() { return blocks_; }
     const std::unordered_map<uint32_t, BlockTypeDescriptor>& block_types() const { return types_; }
@@ -80,17 +75,160 @@ public:
 
 private:
     void apply_log_level(LogLevel level);
+    void rebuild_type_counts();
 
     RuntimeConfig config_;
-    std::unique_ptr<Scheduler> scheduler_;
+    SchedulerType scheduler_;
     std::unordered_map<core::Identity, DataBlock> blocks_;
     std::unordered_map<uint32_t, BlockTypeDescriptor> types_;
     std::vector<Controller> controllers_;
-    void rebuild_type_counts();
 
     CommandId next_command_id_{0};
     uint64_t next_identity_{0};
     std::unordered_map<uint32_t, size_t> type_counts_;
 };
+
+// -------------------------------------------------------------------
+// Template implementation (must be visible at point of instantiation)
+// -------------------------------------------------------------------
+
+template <typename S>
+Runtime<S>::Runtime(RuntimeConfig config)
+    : config_{config} {
+    apply_log_level(config_.log_level);
+    SPDLOG_DEBUG("Runtime created");
+}
+
+template <typename S>
+Runtime<S>::~Runtime() {
+    SPDLOG_DEBUG("Runtime destroyed");
+}
+
+template <typename S>
+void Runtime<S>::apply_log_level(LogLevel level) {
+    switch (level) {
+        case LogLevel::Trace: spdlog::set_level(spdlog::level::trace); break;
+        case LogLevel::Debug: spdlog::set_level(spdlog::level::debug); break;
+        case LogLevel::Info:  spdlog::set_level(spdlog::level::info);  break;
+        case LogLevel::Warn:  spdlog::set_level(spdlog::level::warn);  break;
+        case LogLevel::Error: spdlog::set_level(spdlog::level::err);   break;
+        case LogLevel::Critical: spdlog::set_level(spdlog::level::critical); break;
+        case LogLevel::Off:   spdlog::set_level(spdlog::level::off);   break;
+    }
+}
+
+template <typename S>
+core::Result<void> Runtime<S>::register_block_type(BlockTypeDescriptor descriptor) {
+    if (types_.contains(descriptor.type_id)) {
+        return core::Error{core::ErrorCode::DuplicateRegistration, "Block type already registered"};
+    }
+    types_[descriptor.type_id] = descriptor;
+    SPDLOG_DEBUG("Registered block type: id={}, name={}, size={}",
+                 descriptor.type_id, descriptor.name, descriptor.size);
+    return {};
+}
+
+template <typename S>
+core::Result<void> Runtime<S>::register_controller(Controller controller) {
+    if (!controller) {
+        return core::Error{core::ErrorCode::InvalidOperation, "Controller is empty"};
+    }
+    controllers_.push_back(std::move(controller));
+    SPDLOG_DEBUG("Registered controller (total={})", controllers_.size());
+    return {};
+}
+
+template <typename S>
+core::Result<core::Identity> Runtime<S>::create_block(uint32_t type_id) {
+    auto it = types_.find(type_id);
+    if (it == types_.end()) {
+        return core::Error{core::ErrorCode::TypeNotRegistered, "Block type not registered"};
+    }
+    auto& desc = it->second;
+    core::Identity id{++next_identity_};
+    blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    return id;
+}
+
+template <typename S>
+core::Result<void> Runtime<S>::destroy_block(core::Identity identity) {
+    if (!identity.is_valid()) {
+        return core::Error{core::ErrorCode::InvalidIdentity, "Identity is invalid"};
+    }
+    auto it = blocks_.find(identity);
+    if (it == blocks_.end()) {
+        return core::Error{core::ErrorCode::BlockNotFound, "Block not found"};
+    }
+    blocks_.erase(it);
+    return {};
+}
+
+template <typename S>
+core::Result<CommandId> Runtime<S>::submit_command(Command command) {
+    command.set_id(++next_command_id_);
+    scheduler_.enqueue(std::move(command));
+    return command.id();
+}
+
+template <typename S>
+void Runtime<S>::cancel_command(CommandId id) {
+    scheduler_.cancel(id);
+}
+
+template <typename S>
+TickResult Runtime<S>::tick() {
+    TickResult result;
+
+    // Controller Execution Phase
+    size_t controller_count = 0;
+    for (auto& controller : controllers_) {
+        StateView state_view{blocks_, types_};
+        CommandProducer producer{
+            [this](Command cmd) -> core::Result<CommandId> {
+                return this->submit_command(std::move(cmd));
+            }
+        };
+        auto cr = controller(state_view, producer);
+        if (!cr) {
+            SPDLOG_WARN("Controller failed: {}", cr.error().message());
+            result.status = ExecutionStatus::PartialFailure;
+        }
+        controller_count++;
+    }
+    result.controllers_executed = controller_count;
+
+    // Command Processing Phase
+    auto process_result = scheduler_.process_pending(blocks_, types_, next_identity_);
+
+    auto rejected = scheduler_.take_rejected();
+    result.commands_executed = scheduler_.executed_count();
+    result.commands_rejected = rejected.size();
+    result.rejected_commands = std::move(rejected);
+
+    if (!process_result) {
+        result.status = ExecutionStatus::CriticalFailure;
+    } else if (result.commands_rejected > 0) {
+        result.status = ExecutionStatus::PartialFailure;
+    } else {
+        result.status = ExecutionStatus::Success;
+    }
+
+    rebuild_type_counts();
+    return result;
+}
+
+template <typename S>
+bool Runtime<S>::has_block(core::Identity identity) const {
+    return blocks_.contains(identity);
+}
+
+template <typename S>
+void Runtime<S>::rebuild_type_counts() {
+    type_counts_.clear();
+    for (const auto& [id, block] : blocks_) {
+        (void)id;
+        type_counts_[block.type_id()]++;
+    }
+}
 
 } // namespace gameak::runtime

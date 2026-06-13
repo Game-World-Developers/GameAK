@@ -4,7 +4,7 @@
 
 namespace gameak::runtime {
 
-void FifoScheduler::enqueue(Command command) {
+void FifoScheduler::enqueue_impl(Command command) {
     queue_.push(std::move(command));
 }
 
@@ -117,7 +117,7 @@ core::Result<void> FifoScheduler::execute(
     return core::Error{core::ErrorCode::InternalError};
 }
 
-core::Result<void> FifoScheduler::process_pending(
+core::Result<void> FifoScheduler::process_pending_impl(
     std::unordered_map<core::Identity, DataBlock>& blocks,
     std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity) {

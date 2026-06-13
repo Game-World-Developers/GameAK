@@ -1,8 +1,8 @@
 # SPEC-013: Flat Vector
 
-Status: DRAFT
+Status: READY
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -20,7 +20,7 @@ Used internally by the Runtime for storage that benefits from locality and avoid
 
 `flat_vector` must accept:
 - `T` — element type
-- `InlineN` — number of inline elements (default 4)
+- `InlineN` — number of inline elements (default 8)
 
 ### Inline Storage
 
@@ -38,28 +38,30 @@ When `size() > InlineN`, storage moves to heap-allocated memory. Existing elemen
 |--------|-------------|
 | `push_back(const T&)` | Append by copy |
 | `push_back(T&&)` | Append by move |
+| `emplace_back(Args&&...)` | Construct in-place at end |
 | `pop_back()` | Remove last element |
 | `clear()` | Remove all elements |
 | `size() const` | Number of elements |
 | `capacity() const` | Current capacity |
 | `empty() const` | `size() == 0` |
 | `operator[](size_t)` | Bounded access (no bounds check) |
+| `at(size_t)` | Bounded access (no bounds check) |
 | `data()` | Raw pointer to storage |
 | `begin()/end()` | Forward iteration |
 | `reserve(size_t)` | Reserve capacity |
 | `resize(size_t)` | Resize, default-constructing new elements |
 | `back()` | Last element |
 | `front()` | First element |
-| `insert(const_iterator, const T&)` | Insert at position |
 | `erase(const_iterator)` | Erase at position |
+| `erase(const_iterator, const_iterator)` | Erase range |
+
+### Copy Semantics
+
+`flat_vector` may be copy-constructible and copy-assignable. After copy, the new vector has the same elements.
 
 ### Move Semantics
 
 `flat_vector` must be move-constructible and move-assignable. Moved-from state must be empty (`size() == 0`).
-
-### No Copy
-
-`flat_vector` must not be copy-constructible or copy-assignable (intentional for internal use).
 
 ---
 
@@ -77,19 +79,22 @@ When `size() > InlineN`, storage moves to heap-allocated memory. Existing elemen
 - Allocator customization
 - `std::vector`-compatible allocator interface
 - Thread safety
-- Emplace construction
 
 ---
 
 ## Open Questions
 
-* [ ] Should `reserve()` be a no-op when requested capacity <= current capacity?
+* [x] Should `reserve()` be a no-op when requested capacity <= current capacity?
 
 **Answer:** Yes. `reserve()` only grows, never shrinks.
 
-* [ ] Should `resize()` value-initialize or default-construct new elements?
+* [x] Should `resize()` value-initialize or default-construct new elements?
 
 **Answer:** Default-construct. Elements are constructed with `T{}`.
+
+* [x] What is the default for `InlineN`?
+
+**Answer:** 8. Matches the runtime's typical use case.
 
 ---
 

@@ -1,8 +1,8 @@
 # SPEC-016: Red-Black Tree
 
-Status: DRAFT
+Status: READY
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -21,7 +21,7 @@ Used internally for ordered lookups where amortized rebalancing cost is preferre
 `rb_tree` must accept:
 - `Key` — key type (must be comparable)
 - `Value` — mapped value type
-- `Compare` — comparison functor (default `std::less<Key>`)
+- `Compare` — comparison functor (default `std::less<Key>`, must be default-constructible)
 
 ### Red-Black Invariants
 
@@ -53,7 +53,7 @@ After inserting a red node, the tree must walk up fixing violations:
 
 ### Iteration
 
-In-order traversal via bidirectional iterator. `begin()` returns the leftmost (smallest) node.
+In-order traversal via bidirectional iterator. `begin()` returns the leftmost (smallest) node. Decrementing `begin()` and incrementing `end()` are undefined behavior.
 
 ### Key Update
 
@@ -63,7 +63,17 @@ If a key already exists, `insert` must update the value and return an iterator t
 
 `rb_tree` must be move-constructible and move-assignable. Moved-from state must be empty.
 
-No copy semantics.
+No copy semantics. Move operations are `noexcept`.
+
+### Additional Public API
+
+For testing and diagnostics, `check_invariants() const` returns `true` if all four red-black invariants hold.
+
+`iterator::raw()` returns the underlying `node*` (for debugging use).
+
+### Erase
+
+The implementation provides `erase(const Key&)` as an extension. It is not required by this specification.
 
 ---
 
@@ -77,7 +87,7 @@ No copy semantics.
 
 ## Out of Scope
 
-- Erase (removal)
+- Erase (removal) — optional extension
 - Thread safety
 - Allocator customization
 - `std::map` compatibility
@@ -86,9 +96,17 @@ No copy semantics.
 
 ## Open Questions
 
-* [ ] Should the tree track black-height for validation?
+* [x] Should the tree track black-height for validation?
 
-**Answer:** No. Black-height validation is a debug-only concern. The tree does not expose it.
+**Answer:** No. Black-height validation is a debug-only concern exposed via `check_invariants()`. The tree does not expose it otherwise.
+
+* [x] What should `*it` yield?
+
+**Answer:** `std::pair<const Key, Value>&`.
+
+* [x] Does `find()` return `iterator` or `const_iterator`?
+
+**Answer:** `iterator` (same type for both const and non-const contexts).
 
 ---
 

@@ -1,8 +1,8 @@
 # SPEC-014: Intrusive List
 
-Status: DRAFT
+Status: READY
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -16,9 +16,9 @@ A doubly-linked intrusive list where elements embed the list node. No per-elemen
 
 ### Embedding
 
-Types must inherit from `intrusive_node` or contain an `intrusive_node` member.
+Types must inherit from `intrusive_node`. Nodes may be in at most one list at a time.
 
-`intrusive_node` must provide `next` and `prev` pointers manipulated by the list.
+`intrusive_node` must provide `next` and `prev` pointers initialized to `nullptr`.
 
 ### Circular Sentinel
 
@@ -32,15 +32,15 @@ The list must use a circular sentinel node. An empty list has the sentinel point
 |--------|-------------|
 | `push_front(T*)` | Insert at front |
 | `push_back(T*)` | Insert at back |
-| `pop_front()` | Remove front |
-| `pop_back()` | Remove back |
-| `insert(const_iterator, T*)` | Insert before position |
-| `erase(const_iterator)` | Erase at position |
+| `pop_front()` | Remove front (no-op if empty) |
+| `pop_back()` | Remove back (no-op if empty) |
+| `insert(const_iterator, T*)` | Insert before position. Returns `iterator` to inserted element. |
+| `erase(const_iterator)` | Erase at position. Returns `iterator` to next element. |
 | `clear()` | Remove all |
 | `size() const` | Element count |
 | `empty() const` | `size() == 0` |
-| `front()` | First element reference |
-| `back()` | Last element reference |
+| `front()` / `front() const` | First element reference |
+| `back()` / `back() const` | Last element reference |
 | `begin()/end()` | Iteration |
 
 ### Iterator
@@ -50,9 +50,18 @@ The list must provide:
 - `const_iterator` — immutable, bidirectional
 - `iterator` must implicitly convert to `const_iterator`
 
+### Copy and Move
+
+- Copy is deleted
+- Move is supported. After move, the source list is empty.
+
+### Destructor
+
+Destructor calls `clear()` to unlink all elements. The list does not own or delete nodes; `clear()` only updates pointers.
+
 ### No Ownership
 
-The list does not own or delete nodes. The caller manages lifetime.
+The list does not own or delete nodes. The caller manages lifetime. Accessing `front()` or `back()` on an empty list is undefined behavior.
 
 ---
 
@@ -76,9 +85,13 @@ The list does not own or delete nodes. The caller manages lifetime.
 
 ## Open Questions
 
-* [ ] Should `size()` be cached O(1) or computed O(N)?
+* [x] Should `size()` be cached O(1) or computed O(N)?
 
 **Answer:** Cached O(1). Size is updated on every insert/erase.
+
+* [x] What happens on `pop_front()`/`pop_back()` of empty list?
+
+**Answer:** No-op.
 
 ---
 

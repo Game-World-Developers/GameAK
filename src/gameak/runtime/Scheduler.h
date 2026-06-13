@@ -20,9 +20,12 @@ public:
         std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity) = 0;
 
+    virtual void cancel(CommandId id) = 0;
+
     virtual size_t pending_count() const = 0;
     virtual size_t executed_count() const = 0;
     virtual size_t rejected_count() const = 0;
+    virtual size_t skipped_count() const = 0;
 };
 
 } // namespace gameak::runtime

@@ -9,6 +9,8 @@
 
 namespace gameak::runtime {
 
+using CommandId = uint64_t;
+
 enum class CommandType : uint32_t {
     CreateBlock,
     DestroyBlock,
@@ -33,14 +35,17 @@ using CommandPayload = std::variant<CommandCreateBlock, CommandDestroyBlock, Com
 
 class Command {
 public:
-    explicit Command(CommandPayload payload)
-        : payload_{std::move(payload)} {}
+    explicit Command(CommandPayload payload, CommandId id = 0)
+        : payload_{std::move(payload)}, id_{id} {}
 
     CommandType type() const;
     const CommandPayload& payload() const { return payload_; }
+    CommandId id() const { return id_; }
+    void set_id(CommandId id) { id_ = id; }
 
 private:
     CommandPayload payload_;
+    CommandId id_{0};
 };
 
 } // namespace gameak::runtime

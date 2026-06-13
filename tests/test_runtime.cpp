@@ -185,6 +185,44 @@ int main(int argc, char* argv[]) {
             expect(result.commands_rejected == 1).toBeTruthy();
             expect(result.commands_executed == 0).toBeTruthy();
         });
+
+        it("cancels a pending command", {
+            Runtime rt;
+            BlockTypeDescriptor desc;
+            desc.type_id = 1;
+            desc.size = sizeof(int);
+            desc.alignment = alignof(int);
+            desc.name = "test";
+            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+            auto id = rt.submit_command(Command{CommandCreateBlock{1}});
+            expect(id.has_value()).toBeTruthy();
+            rt.cancel_command(id.value());
+
+            auto result = rt.tick();
+            expect(result.commands_executed == 0).toBeTruthy();
+            expect(result.commands_rejected == 0).toBeTruthy();
+            expect(rt.block_count(1) == 0).toBeTruthy();
+        });
+
+        it("cancels one command, executes another", {
+            Runtime rt;
+            BlockTypeDescriptor desc;
+            desc.type_id = 1;
+            desc.size = sizeof(int);
+            desc.alignment = alignof(int);
+            desc.name = "test";
+            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+            auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
+            auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
+            expect(id2.has_value()).toBeTruthy();
+            rt.cancel_command(id1.value());
+
+            auto result = rt.tick();
+            expect(result.commands_executed == 1).toBeTruthy();
+            expect(rt.block_count(1) == 1).toBeTruthy();
+        });
     });
 
     describe("Controllers", {

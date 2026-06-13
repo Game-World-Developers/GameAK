@@ -57,7 +57,8 @@ public:
     core::Result<core::Identity> create_block(uint32_t type_id);
     core::Result<void> destroy_block(core::Identity identity);
 
-    core::Result<void> submit_command(Command command);
+    core::Result<CommandId> submit_command(Command command);
+    void cancel_command(CommandId id);
 
     TickResult tick();
 
@@ -81,6 +82,7 @@ private:
     std::unordered_map<core::Identity, DataBlock> blocks_;
     std::unordered_map<uint32_t, BlockTypeDescriptor> types_;
     std::vector<Controller> controllers_;
+    CommandId next_command_id_{0};
     uint64_t next_identity_{0};
 };
 

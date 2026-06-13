@@ -95,6 +95,12 @@ core::Result<void> FifoScheduler::process_pending(
         auto command = std::move(queue_.front());
         queue_.pop();
 
+        if (cancelled_.contains(command.id())) {
+            cancelled_.erase(command.id());
+            skipped_++;
+            continue;
+        }
+
         auto validation = validate(command, blocks, types);
         if (!validation) {
             rejected_++;

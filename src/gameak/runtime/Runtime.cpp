@@ -83,10 +83,17 @@ core::Result<void> Runtime::destroy_block(core::Identity identity) {
     return {};
 }
 
-core::Result<void> Runtime::submit_command(Command command) {
+core::Result<CommandId> Runtime::submit_command(Command command) {
+    CommandId id = ++next_command_id_;
+    command.set_id(id);
     scheduler_->enqueue(std::move(command));
-    SPDLOG_TRACE("Command enqueued (pending: {})", scheduler_->pending_count());
-    return {};
+    SPDLOG_TRACE("Command {} enqueued (pending: {})", id, scheduler_->pending_count());
+    return id;
+}
+
+void Runtime::cancel_command(CommandId id) {
+    scheduler_->cancel(id);
+    SPDLOG_TRACE("Command {} cancelled", id);
 }
 
 TickResult Runtime::tick() {

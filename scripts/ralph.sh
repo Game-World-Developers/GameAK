@@ -3,6 +3,8 @@
 # This scripts run a LLM loop called Ralph Wiggum
 
 PROMPT_FILE="PROMPT.md"
+MAX_ITERATIONS=50
+CURRENT_ITERATIONS=0
 
 # Check if we are not root
 if [[ "$EUID" -eq 0 ]]; then
@@ -29,13 +31,18 @@ if [[ ! -f "$PROMPT_FILE" ]]; then
   exit 1
 fi
 
-while true; do 
+while [[ $CURRENT_ITERATIONS -lt $MAX_ITERATIONS ]]; do 
   # Read the prompt file
   
-  cat "$PROMPT_FILE" | opencode run --dangerously-skip-permissions
+  opencode run --dangerously-skip-permissions < "$PROMPT_FILE" | tee output.txt
 
   if grep -q "<promise>DONE</promise>" output.txt; then
     echo "✔️Ralph Wiggum has completed his task. Exiting loop."
     break
   fi
+
+  CURRENT_ITERATIONS=$((CURRENT_ITERATIONS + 1))
 done
+
+echo "Ralph Wiggum loop has ended after $CURRENT_ITERATIONS iterations."
+exit 1

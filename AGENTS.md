@@ -1,34 +1,76 @@
-# AGENTS
 
-<skills_system priority="1">
+# Project Rules
 
-## Available Skills
+## Spec Driven Development
 
-<!-- SKILLS_TABLE_START -->
-<usage>
-When users ask you to perform tasks, check if any of the available skills below can help complete the task more effectively. Skills provide specialized capabilities and domain knowledge.
+NEVER implement anything that is not covered by a spec in Specs/.
 
-How to use skills:
-- Invoke: `npx openskills read <skill-name>` (run in your shell)
-  - For multiple: `npx openskills read skill-one,skill-two`
-- The skill content will load with detailed instructions on how to complete the task
-- Base directory provided in output for resolving bundled resources (references/, scripts/, assets/)
+Before writing any code, run @ralph on the relevant spec file.
 
-Usage notes:
-- Only use skills listed in <available_skills> below
-- Do not invoke a skill that is already loaded in your context
-- Each skill invocation is stateless
-</usage>
+Only proceed if Ralph returns:
 
-<available_skills>
+VERDICT: READY
 
-<skill>
-<name>ralph-wiggum</name>
-<description>Autonomous AI coding with spec-driven development. Implements Geoffrey Huntley's iterative bash loop methodology where agents work through specs one at a time, outputting a completion signal only when acceptance criteria are 100% met.</description>
-<location>project</location>
-</skill>
+If Ralph returns:
 
-</available_skills>
-<!-- SKILLS_TABLE_END -->
+VERDICT: NOT READY
 
-</skills_system>
+stop immediately and report the unresolved questions.
+
+Do not assume.
+Do not infer.
+Do not invent behavior.
+
+## Spec lifecycle
+
+Every spec must have one of the following states:
+
+* DRAFT
+* REVIEWED
+* BLOCKED
+* READY
+* IMPLEMENTED
+
+Definitions:
+
+* DRAFT → initial version
+* REVIEWED → reviewed but not validated
+* BLOCKED → waiting for answers
+* READY → validated by Ralph
+* IMPLEMENTED → code completed
+
+## Implementation rules
+
+* Every new file must correspond to a spec.
+* Every new behavior must correspond to a spec.
+* If a spec is silent, ask.
+* Tests must cover every behavior explicitly described in the spec.
+* If a spec changes, re-run Ralph before modifying code.
+
+## Validation artifacts
+
+After validation Ralph must generate:
+
+.verdicts/<SPEC-ID>.md
+
+Example:
+
+.veredicts/SPEC-001.md
+
+The verdict file must contain:
+
+* Spec identifier
+* Validation timestamp
+* Verdict
+* Open questions
+* Notes
+
+## Commit discipline
+
+Every commit must reference the spec:
+
+feat(SPEC-001): implement authentication
+
+fix(SPEC-001): handle expired sessions
+
+refactor(SPEC-002): simplify inventory storage

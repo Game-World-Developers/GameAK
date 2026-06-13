@@ -2,6 +2,7 @@
 #include "gameak/core/Result.h"
 #include "gameak/core/Error.h"
 #include "gameak/core/flat_vector.h"
+#include "gameak/core/intrusive_list.h"
 #include "gameak/runtime/Runtime.h"
 #include "gameak/runtime/Controller.h"
 #include "gameak/runtime/Command.h"
@@ -17,6 +18,13 @@ using namespace gameak::runtime;
 using FlatVec4 = gameak::core::flat_vector<int, 4>;
 using FlatVec2 = gameak::core::flat_vector<int, 2>;
 using FlatVec3 = gameak::core::flat_vector<int, 3>;
+
+struct TestNode : gameak::core::intrusive_node {
+    int value;
+    explicit TestNode(int v) : value(v) {}
+};
+
+using TestList = gameak::core::intrusive_list<TestNode>;
 
 int main(int argc, char* argv[]) {
     cest_init(argc, argv);
@@ -111,6 +119,27 @@ int main(int argc, char* argv[]) {
             expect(v.size() == 2).toBeTruthy();
             expect(v[0] == 10).toBeTruthy();
             expect(v[1] == 20).toBeTruthy();
+        });
+    });
+
+    describe("Core - intrusive_list", {
+        it("supports push erase clear and iteration", {
+            TestList list;
+            TestNode a{10};
+            TestNode b{20};
+            TestNode c{30};
+            list.push_back(&a);
+            list.push_back(&b);
+            list.push_back(&c);
+            int sum = 0;
+            for (auto& node : list) { sum += node.value; }
+            expect(sum == 60).toBeTruthy();
+
+            list.erase(list.begin());
+            expect(list.size() == 2).toBeTruthy();
+
+            list.clear();
+            expect(list.empty()).toBeTruthy();
         });
     });
 

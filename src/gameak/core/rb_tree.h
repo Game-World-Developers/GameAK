@@ -92,6 +92,57 @@ class rb_tree {
         root_->col = color::BLACK;
     }
 
+    void fix_erase(node* child, node* parent, int dir) {
+        while (parent) {
+            if (child && child->col == color::RED) {
+                child->col = color::BLACK;
+                return;
+            }
+
+            node* sib = dir < 0 ? parent->right : parent->left;
+
+            if (sib->col == color::RED) {
+                parent->col = color::RED;
+                sib->col = color::BLACK;
+                rotate(parent, dir < 0 ? 1 : -1);
+                sib = dir < 0 ? parent->right : parent->left;
+            }
+
+            if ((!sib->left || sib->left->col == color::BLACK) &&
+                (!sib->right || sib->right->col == color::BLACK)) {
+                sib->col = color::RED;
+                child = parent;
+                parent = parent->parent;
+                dir = parent ? dir_of(child) : 0;
+            } else {
+                if (dir < 0) {
+                    if (!sib->right || sib->right->col == color::BLACK) {
+                        sib->left->col = color::BLACK;
+                        sib->col = color::RED;
+                        rotate(sib, -1);
+                        sib = parent->right;
+                    }
+                    sib->col = parent->col;
+                    parent->col = color::BLACK;
+                    sib->right->col = color::BLACK;
+                    rotate(parent, 1);
+                } else {
+                    if (!sib->left || sib->left->col == color::BLACK) {
+                        sib->right->col = color::BLACK;
+                        sib->col = color::RED;
+                        rotate(sib, 1);
+                        sib = parent->left;
+                    }
+                    sib->col = parent->col;
+                    parent->col = color::BLACK;
+                    sib->left->col = color::BLACK;
+                    rotate(parent, -1);
+                }
+                return;
+            }
+        }
+    }
+
     void destroy(node* n) {
         if (n) {
             destroy(n->left);
@@ -205,6 +256,53 @@ public:
 
         fix_insert(nn);
         return iterator(nn);
+    }
+
+    void erase(const Key& key) {
+        node* target = root_;
+        while (target) {
+            if (comp_(key, target->key())) {
+                target = target->left;
+            } else if (comp_(target->key(), key)) {
+                target = target->right;
+            } else {
+                break;
+            }
+        }
+        if (!target) return;
+
+        if (target->left && target->right) {
+            node* succ = target->right;
+            while (succ->left) succ = succ->left;
+            const_cast<Key&>(target->kv.first) = succ->key();
+            target->kv.second = std::move(succ->kv.second);
+            target = succ;
+        }
+
+        node* child = target->left ? target->left : target->right;
+        node* parent = target->parent;
+        int del_dir = parent ? dir_of(target) : 0;
+        bool removed_black = target->col == color::BLACK;
+
+        if (child) child->parent = parent;
+        if (!parent) {
+            root_ = child;
+        } else {
+            child_ptr(parent, del_dir) = child;
+        }
+
+        size_--;
+        delete target;
+
+        if (removed_black) {
+            if (child && child->col == color::RED) {
+                child->col = color::BLACK;
+            } else {
+                fix_erase(child, parent, del_dir);
+            }
+        }
+
+        if (root_) root_->col = color::BLACK;
     }
 
     iterator find(const Key& key) const {

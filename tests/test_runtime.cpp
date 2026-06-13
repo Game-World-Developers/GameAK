@@ -573,6 +573,65 @@ int main(int argc, char* argv[]) {
             expect(tree.size() == 1).toBeTruthy();
             expect(tree.find(1)->second == "new").toBeTruthy();
         });
+        it("erases leaf node", {
+            AVLTreeIntStr tree;
+            tree.insert(1, "a");
+            tree.insert(2, "b");
+            tree.insert(3, "c");
+            tree.erase(1);
+            expect(tree.size() == 2).toBeTruthy();
+            expect(tree.contains(1)).toBeFalsy();
+            int prev = 0;
+            int cnt = 0;
+            for (auto it = tree.begin(); it != tree.end(); ++it) {
+                expect(it->first > prev).toBeTruthy();
+                prev = it->first;
+                ++cnt;
+            }
+            expect(cnt == 2).toBeTruthy();
+        });
+        it("erases node with one child", {
+            AVLTreeIntStr tree;
+            tree.insert(1, "a");
+            tree.insert(2, "b");
+            tree.insert(3, "c");
+            tree.erase(2);
+            expect(tree.size() == 2).toBeTruthy();
+            expect(tree.contains(2)).toBeFalsy();
+        });
+        it("erases node with two children", {
+            AVLTreeIntStr tree;
+            tree.insert(2, "a");
+            tree.insert(1, "b");
+            tree.insert(3, "c");
+            tree.erase(2);
+            expect(tree.size() == 2).toBeTruthy();
+            expect(tree.contains(2)).toBeFalsy();
+        });
+        it("erases root", {
+            AVLTreeIntStr tree;
+            tree.insert(5, "a");
+            tree.insert(3, "b");
+            tree.insert(7, "c");
+            tree.insert(2, "d");
+            tree.insert(4, "e");
+            tree.erase(5);
+            expect(tree.size() == 4).toBeTruthy();
+            int prev = 0;
+            int cnt = 0;
+            for (auto it = tree.begin(); it != tree.end(); ++it) {
+                expect(it->first > prev).toBeTruthy();
+                prev = it->first;
+                ++cnt;
+            }
+            expect(cnt == 4).toBeTruthy();
+        });
+        it("erases nonexistent key", {
+            AVLTreeIntStr tree;
+            tree.insert(1, "a");
+            tree.erase(99);
+            expect(tree.size() == 1).toBeTruthy();
+        });
     });
 
     describe("Core - rb_tree", {
@@ -653,6 +712,65 @@ int main(int argc, char* argv[]) {
             tree.insert(1, "new");
             expect(tree.size() == 1).toBeTruthy();
             expect(tree.find(1)->second == "new").toBeTruthy();
+        });
+        it("erases leaf node", {
+            RBTreeIntStr tree;
+            tree.insert(1, "a");
+            tree.insert(2, "b");
+            tree.insert(3, "c");
+            tree.erase(1);
+            expect(tree.size() == 2).toBeTruthy();
+            expect(tree.contains(1)).toBeFalsy();
+            int prev = 0;
+            int cnt = 0;
+            for (auto it = tree.begin(); it != tree.end(); ++it) {
+                expect(it->first > prev).toBeTruthy();
+                prev = it->first;
+                ++cnt;
+            }
+            expect(cnt == 2).toBeTruthy();
+        });
+        it("erases node with one child", {
+            RBTreeIntStr tree;
+            tree.insert(1, "a");
+            tree.insert(2, "b");
+            tree.insert(3, "c");
+            tree.erase(2);
+            expect(tree.size() == 2).toBeTruthy();
+            expect(tree.contains(2)).toBeFalsy();
+        });
+        it("erases node with two children", {
+            RBTreeIntStr tree;
+            tree.insert(2, "a");
+            tree.insert(1, "b");
+            tree.insert(3, "c");
+            tree.erase(2);
+            expect(tree.size() == 2).toBeTruthy();
+            expect(tree.contains(2)).toBeFalsy();
+        });
+        it("erases root", {
+            RBTreeIntStr tree;
+            tree.insert(5, "a");
+            tree.insert(3, "b");
+            tree.insert(7, "c");
+            tree.insert(2, "d");
+            tree.insert(4, "e");
+            tree.erase(5);
+            expect(tree.size() == 4).toBeTruthy();
+            int prev = 0;
+            int cnt = 0;
+            for (auto it = tree.begin(); it != tree.end(); ++it) {
+                expect(it->first > prev).toBeTruthy();
+                prev = it->first;
+                ++cnt;
+            }
+            expect(cnt == 4).toBeTruthy();
+        });
+        it("erases nonexistent key", {
+            RBTreeIntStr tree;
+            tree.insert(1, "a");
+            tree.erase(99);
+            expect(tree.size() == 1).toBeTruthy();
         });
     });
 

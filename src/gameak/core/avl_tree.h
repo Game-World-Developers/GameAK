@@ -86,6 +86,49 @@ class avl_tree {
         }
     }
 
+    void rebalance_erase(node* n, int dir) {
+        while (n) {
+            n->balance -= dir;
+
+            if (n->balance == -2) {
+                if (n->left->balance == -1) {
+                    rotate(n, -1);
+                } else {
+                    rotate(n->left, 1);
+                    rotate(n, -1);
+                }
+                node* p = n->parent;
+                if (p->balance == 0) {
+                    dir = dir_of(p);
+                    n = p->parent;
+                } else {
+                    return;
+                }
+            } else if (n->balance == 2) {
+                if (n->right->balance == 1) {
+                    rotate(n, 1);
+                } else {
+                    rotate(n->right, -1);
+                    rotate(n, 1);
+                }
+                node* p = n->parent;
+                if (p->balance == 0) {
+                    dir = dir_of(p);
+                    n = p->parent;
+                } else {
+                    return;
+                }
+            } else if (n->balance == 0) {
+                node* par = n->parent;
+                if (!par) return;
+                dir = dir_of(n);
+                n = par;
+            } else {
+                return;
+            }
+        }
+    }
+
     void destroy(node* n) {
         if (n) {
             destroy(n->left);
@@ -200,6 +243,44 @@ public:
 
         while (root_->parent) root_ = root_->parent;
         return iterator(nn);
+    }
+
+    void erase(const Key& key) {
+        node* target = root_;
+        while (target) {
+            if (comp_(key, target->key())) {
+                target = target->left;
+            } else if (comp_(target->key(), key)) {
+                target = target->right;
+            } else {
+                break;
+            }
+        }
+        if (!target) return;
+
+        if (target->left && target->right) {
+            node* succ = target->right;
+            while (succ->left) succ = succ->left;
+            const_cast<Key&>(target->kv.first) = succ->key();
+            target->kv.second = std::move(succ->kv.second);
+            target = succ;
+        }
+
+        node* child = target->left ? target->left : target->right;
+        node* parent = target->parent;
+        int del_dir = parent ? dir_of(target) : 0;
+
+        if (child) child->parent = parent;
+        if (!parent) {
+            root_ = child;
+        } else {
+            child_ptr(parent, del_dir) = child;
+        }
+
+        size_--;
+        delete target;
+
+        if (parent) rebalance_erase(parent, del_dir);
     }
 
     iterator find(const Key& key) const {

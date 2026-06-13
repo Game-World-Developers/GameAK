@@ -3,6 +3,8 @@
 #include "gameak/core/Error.h"
 #include "gameak/core/flat_vector.h"
 #include "gameak/core/intrusive_list.h"
+#include "gameak/core/avl_tree.h"
+#include "gameak/core/rb_tree.h"
 #include "gameak/runtime/Runtime.h"
 #include "gameak/runtime/Controller.h"
 #include "gameak/runtime/Command.h"
@@ -458,6 +460,58 @@ int main(int argc, char* argv[]) {
             auto destroy = rt.destroy_block(Identity{999});
             expect(destroy.has_value()).toBeFalsy();
             expect(destroy.error().code() == ErrorCode::BlockNotFound).toBeTruthy();
+        });
+    });
+
+    using AVLTreeIntStr = avl_tree<int, std::string>;
+    using RBTreeIntStr = rb_tree<int, std::string>;
+    describe("Core - avl_tree", {
+        it("inserts finds and iterates", {
+            AVLTreeIntStr tree;
+            expect(tree.empty()).toBeTruthy();
+            tree.insert(3, "three");
+            tree.insert(1, "one");
+            tree.insert(4, "four");
+            tree.insert(2, "two");
+            expect(tree.size() == 4).toBeTruthy();
+            expect(tree.contains(3)).toBeTruthy();
+            expect(tree.contains(5)).toBeFalsy();
+            auto iter = tree.find(2);
+            expect(iter != tree.end()).toBeTruthy();
+            expect(iter->second == "two").toBeTruthy();
+            int prev = 0;
+            int count = 0;
+            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
+                expect(it2->first > prev).toBeTruthy();
+                prev = it2->first;
+                ++count;
+            }
+            expect(count == 4).toBeTruthy();
+        });
+    });
+
+    describe("Core - rb_tree", {
+        it("inserts finds and iterates", {
+            RBTreeIntStr tree;
+            expect(tree.empty()).toBeTruthy();
+            tree.insert(3, "three");
+            tree.insert(1, "one");
+            tree.insert(4, "four");
+            tree.insert(2, "two");
+            expect(tree.size() == 4).toBeTruthy();
+            expect(tree.contains(3)).toBeTruthy();
+            expect(tree.contains(5)).toBeFalsy();
+            auto iter = tree.find(2);
+            expect(iter != tree.end()).toBeTruthy();
+            expect(iter->second == "two").toBeTruthy();
+            int prev = 0;
+            int count = 0;
+            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
+                expect(it2->first > prev).toBeTruthy();
+                prev = it2->first;
+                ++count;
+            }
+            expect(count == 4).toBeTruthy();
         });
     });
 

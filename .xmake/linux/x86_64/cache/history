@@ -1,8 +1,5 @@
 {
     cmdlines = {
-        "xmake require --verbose spdlog",
-        "xmake f",
-        "xmake build gameak_test",
         "xmake build",
         "xmake run test_runtime",
         "xmake show -l targets",
@@ -63,6 +60,9 @@
         "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test"
     }

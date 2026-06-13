@@ -81,10 +81,10 @@ class rb_tree {
                 int pd = dir_of(n->parent);
                 if (d != pd) {
                     rotate(n->parent, d);
-                    n = child_ptr(n->parent, d);
+                    n = child_ptr(n, -d);
                     pd = dir_of(n->parent);
                 }
-                rotate(g, -pd);
+                rotate(g, pd);
                 n->parent->col = color::BLACK;
                 g->col = color::RED;
             }

@@ -1,10 +1,5 @@
 {
     cmdlines = {
-        "xmake build",
-        "xmake run test_runtime",
-        "xmake show -l targets",
-        "xmake run gameak_test",
-        "xmake build",
         "xmake run gameak_test",
         "xmake build",
         "xmake run gameak_test",
@@ -62,6 +57,11 @@
         "xmake run gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test"

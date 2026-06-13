@@ -27,6 +27,36 @@ struct TestNode : gameak::core::intrusive_node {
 };
 
 using TestList = gameak::core::intrusive_list<TestNode>;
+using AVLTreeIntStr = gameak::core::avl_tree<int, std::string>;
+using RBTreeIntStr = gameak::core::rb_tree<int, std::string>;
+
+static void avl_rotation_test(const int* keys, int n) {
+    AVLTreeIntStr tree;
+    for (int i = 0; i < n; ++i) tree.insert(keys[i], "x");
+    expect(tree.size() == (size_t)n).toBeTruthy();
+    int prev = -1;
+    int cnt = 0;
+    for (auto iter = tree.begin(); iter != tree.end(); ++iter) {
+        expect(iter->first > prev).toBeTruthy();
+        prev = iter->first;
+        ++cnt;
+    }
+    expect(cnt == n).toBeTruthy();
+}
+
+static void rb_rotation_test(const int* keys, int n) {
+    RBTreeIntStr tree;
+    for (int i = 0; i < n; ++i) tree.insert(keys[i], "x");
+    expect(tree.size() == (size_t)n).toBeTruthy();
+    int prev = -1;
+    int cnt = 0;
+    for (auto iter = tree.begin(); iter != tree.end(); ++iter) {
+        expect(iter->first > prev).toBeTruthy();
+        prev = iter->first;
+        ++cnt;
+    }
+    expect(cnt == n).toBeTruthy();
+}
 
 int main(int argc, char* argv[]) {
     cest_init(argc, argv);
@@ -463,8 +493,6 @@ int main(int argc, char* argv[]) {
         });
     });
 
-    using AVLTreeIntStr = avl_tree<int, std::string>;
-    using RBTreeIntStr = rb_tree<int, std::string>;
     describe("Core - avl_tree", {
         it("inserts finds and iterates", {
             AVLTreeIntStr tree;
@@ -487,6 +515,62 @@ int main(int argc, char* argv[]) {
                 ++count;
             }
             expect(count == 4).toBeTruthy();
+        });
+        it("handles LL rotation", {
+            int k[3]; k[0] = 3; k[1] = 2; k[2] = 1;
+            avl_rotation_test(k, 3);
+        });
+        it("handles RR rotation", {
+            int k[3]; k[0] = 1; k[1] = 2; k[2] = 3;
+            avl_rotation_test(k, 3);
+        });
+        it("handles LR rotation", {
+            int k[3]; k[0] = 3; k[1] = 1; k[2] = 2;
+            avl_rotation_test(k, 3);
+        });
+        it("handles RL rotation", {
+            int k[3]; k[0] = 1; k[1] = 3; k[2] = 2;
+            avl_rotation_test(k, 3);
+        });
+        it("handles stress 10000 inserts", {
+            AVLTreeIntStr tree;
+            for (int i = 0; i < 10000; ++i) tree.insert(i, "v");
+            expect(tree.size() == 10000).toBeTruthy();
+            int prev = -1;
+            int count = 0;
+            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
+                expect(it2->first == prev + 1).toBeTruthy();
+                prev = it2->first;
+                ++count;
+            }
+            expect(count == 10000).toBeTruthy();
+        });
+        it("handles stress 10000 random inserts", {
+            AVLTreeIntStr tree;
+            for (int i = 0; i < 10000; ++i) tree.insert((i * 7 + 13) % 10000, "v");
+            expect(tree.size() == 10000).toBeTruthy();
+            int prev = -1;
+            int count = 0;
+            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
+                expect(it2->first > prev).toBeTruthy();
+                prev = it2->first;
+                ++count;
+            }
+            expect(count == 10000).toBeTruthy();
+        });
+        it("supports move semantics", {
+            AVLTreeIntStr a;
+            a.insert(1, "a");
+            AVLTreeIntStr b(std::move(a));
+            expect(b.size() == 1).toBeTruthy();
+            expect(b.contains(1)).toBeTruthy();
+        });
+        it("updates existing key", {
+            AVLTreeIntStr tree;
+            tree.insert(1, "old");
+            tree.insert(1, "new");
+            expect(tree.size() == 1).toBeTruthy();
+            expect(tree.find(1)->second == "new").toBeTruthy();
         });
     });
 
@@ -512,6 +596,62 @@ int main(int argc, char* argv[]) {
                 ++count;
             }
             expect(count == 4).toBeTruthy();
+        });
+        it("handles LL rotation", {
+            int k[3]; k[0] = 3; k[1] = 2; k[2] = 1;
+            rb_rotation_test(k, 3);
+        });
+        it("handles RR rotation", {
+            int k[3]; k[0] = 1; k[1] = 2; k[2] = 3;
+            rb_rotation_test(k, 3);
+        });
+        it("handles LR rotation", {
+            int k[3]; k[0] = 3; k[1] = 1; k[2] = 2;
+            rb_rotation_test(k, 3);
+        });
+        it("handles RL rotation", {
+            int k[3]; k[0] = 1; k[1] = 3; k[2] = 2;
+            rb_rotation_test(k, 3);
+        });
+        it("handles stress 10000 inserts", {
+            RBTreeIntStr tree;
+            for (int i = 0; i < 10000; ++i) tree.insert(i, "v");
+            expect(tree.size() == 10000).toBeTruthy();
+            int prev = -1;
+            int count = 0;
+            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
+                expect(it2->first == prev + 1).toBeTruthy();
+                prev = it2->first;
+                ++count;
+            }
+            expect(count == 10000).toBeTruthy();
+        });
+        it("handles stress 10000 random inserts", {
+            RBTreeIntStr tree;
+            for (int i = 0; i < 10000; ++i) tree.insert((i * 7 + 13) % 10000, "v");
+            expect(tree.size() == 10000).toBeTruthy();
+            int prev = -1;
+            int count = 0;
+            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
+                expect(it2->first > prev).toBeTruthy();
+                prev = it2->first;
+                ++count;
+            }
+            expect(count == 10000).toBeTruthy();
+        });
+        it("supports move semantics", {
+            RBTreeIntStr a;
+            a.insert(1, "a");
+            RBTreeIntStr b(std::move(a));
+            expect(b.size() == 1).toBeTruthy();
+            expect(b.contains(1)).toBeTruthy();
+        });
+        it("updates existing key", {
+            RBTreeIntStr tree;
+            tree.insert(1, "old");
+            tree.insert(1, "new");
+            expect(tree.size() == 1).toBeTruthy();
+            expect(tree.find(1)->second == "new").toBeTruthy();
         });
     });
 

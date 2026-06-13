@@ -55,28 +55,34 @@ class avl_tree {
         child->balance = child->balance - dir + (n->balance == -dir ? 1 : 0);
     }
 
-    void rebalance(node* n) {
+    void rebalance(node* n, int d) {
         while (n) {
-            int left_h = n->left ? n->left->balance : 0;
-            int right_h = n->right ? n->right->balance : 0;
+            n->balance += d;
+            if (n->balance == 0) break;
 
-            if (left_h == 2) {
-                if (n->left->left && (n->left->left->balance - (n->left->right ? n->left->right->balance : 0)) >= 0) {
+            if (n->balance == -2) {
+                if (n->left->balance == -1) {
                     rotate(n, -1);
                 } else {
                     rotate(n->left, 1);
                     rotate(n, -1);
                 }
-            } else if (right_h == 2) {
-                if (n->right->right && (n->right->right->balance - (n->right->left ? n->right->left->balance : 0)) >= 0) {
+                break;
+            }
+            if (n->balance == 2) {
+                if (n->right->balance == 1) {
                     rotate(n, 1);
                 } else {
                     rotate(n->right, -1);
                     rotate(n, 1);
                 }
+                break;
             }
 
-            n = n->parent;
+            node* par = n->parent;
+            if (!par) break;
+            d = dir_of(n);
+            n = par;
         }
     }
 
@@ -190,16 +196,9 @@ public:
         child_ptr(par, last_dir) = nn;
         size_++;
 
-        for (node* p = par; p; p = p->parent) {
-            p->balance += last_dir;
-            last_dir = dir_of(p);
-        }
+        rebalance(par, last_dir);
 
-        rebalance(par);
-
-        node* search = par ? par : nn;
-        while (search->parent) search = search->parent;
-        root_ = search;
+        while (root_->parent) root_ = root_->parent;
         return iterator(nn);
     }
 

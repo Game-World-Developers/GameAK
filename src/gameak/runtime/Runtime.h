@@ -6,6 +6,7 @@
 #include "FifoScheduler.h"
 #include "gameak/core/Identity.h"
 #include "gameak/core/Result.h"
+#include "gameak/core/flat_vector.h"
 
 #include <cstdint>
 #include <spdlog/spdlog.h>
@@ -81,7 +82,7 @@ private:
     SchedulerType scheduler_;
     std::unordered_map<core::Identity, DataBlock> blocks_;
     std::unordered_map<uint32_t, BlockTypeDescriptor> types_;
-    std::vector<Controller> controllers_;
+    gameak::core::flat_vector<Controller, 4> controllers_;
 
     CommandId next_command_id_{0};
     uint64_t next_identity_{0};
@@ -95,7 +96,7 @@ private:
 template <typename S>
 Runtime<S>::Runtime(RuntimeConfig config)
     : config_{config} {
-    apply_log_level(config_.log_level);
+    this->apply_log_level(this->config_.log_level);
     SPDLOG_DEBUG("Runtime created");
 }
 
@@ -119,10 +120,10 @@ void Runtime<S>::apply_log_level(LogLevel level) {
 
 template <typename S>
 core::Result<void> Runtime<S>::register_block_type(BlockTypeDescriptor descriptor) {
-    if (types_.contains(descriptor.type_id)) {
+    if (this->types_.contains(descriptor.type_id)) {
         return core::Error{core::ErrorCode::DuplicateRegistration, "Block type already registered"};
     }
-    types_[descriptor.type_id] = descriptor;
+    this->types_[descriptor.type_id] = descriptor;
     SPDLOG_DEBUG("Registered block type: id={}, name={}, size={}",
                  descriptor.type_id, descriptor.name, descriptor.size);
     return {};
@@ -133,20 +134,20 @@ core::Result<void> Runtime<S>::register_controller(Controller controller) {
     if (!controller) {
         return core::Error{core::ErrorCode::InvalidOperation, "Controller is empty"};
     }
-    controllers_.push_back(std::move(controller));
-    SPDLOG_DEBUG("Registered controller (total={})", controllers_.size());
+    this->controllers_.push_back(std::move(controller));
+    SPDLOG_DEBUG("Registered controller (total={})", this->controllers_.size());
     return {};
 }
 
 template <typename S>
 core::Result<core::Identity> Runtime<S>::create_block(uint32_t type_id) {
-    auto it = types_.find(type_id);
-    if (it == types_.end()) {
+    auto it = this->types_.find(type_id);
+    if (it == this->types_.end()) {
         return core::Error{core::ErrorCode::TypeNotRegistered, "Block type not registered"};
     }
     auto& desc = it->second;
-    core::Identity id{++next_identity_};
-    blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    core::Identity id{++this->next_identity_};
+    this->blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
     return id;
 }
 
@@ -155,24 +156,24 @@ core::Result<void> Runtime<S>::destroy_block(core::Identity identity) {
     if (!identity.is_valid()) {
         return core::Error{core::ErrorCode::InvalidIdentity, "Identity is invalid"};
     }
-    auto it = blocks_.find(identity);
-    if (it == blocks_.end()) {
+    auto it = this->blocks_.find(identity);
+    if (it == this->blocks_.end()) {
         return core::Error{core::ErrorCode::BlockNotFound, "Block not found"};
     }
-    blocks_.erase(it);
+    this->blocks_.erase(it);
     return {};
 }
 
 template <typename S>
 core::Result<CommandId> Runtime<S>::submit_command(Command command) {
-    command.set_id(++next_command_id_);
-    scheduler_.enqueue(std::move(command));
+    command.set_id(++this->next_command_id_);
+    this->scheduler_.enqueue(std::move(command));
     return command.id();
 }
 
 template <typename S>
 void Runtime<S>::cancel_command(CommandId id) {
-    scheduler_.cancel(id);
+    this->scheduler_.cancel(id);
 }
 
 template <typename S>
@@ -181,8 +182,8 @@ TickResult Runtime<S>::tick() {
 
     // Controller Execution Phase
     size_t controller_count = 0;
-    for (auto& controller : controllers_) {
-        StateView state_view{blocks_, types_};
+    for (auto& controller : this->controllers_) {
+        StateView state_view{this->blocks_, this->types_};
         CommandProducer producer{
             [this](Command cmd) -> core::Result<CommandId> {
                 return this->submit_command(std::move(cmd));
@@ -198,10 +199,10 @@ TickResult Runtime<S>::tick() {
     result.controllers_executed = controller_count;
 
     // Command Processing Phase
-    auto process_result = scheduler_.process_pending(blocks_, types_, next_identity_);
+    auto process_result = this->scheduler_.process_pending(this->blocks_, this->types_, this->next_identity_);
 
-    auto rejected = scheduler_.take_rejected();
-    result.commands_executed = scheduler_.executed_count();
+    auto rejected = this->scheduler_.take_rejected();
+    result.commands_executed = this->scheduler_.executed_count();
     result.commands_rejected = rejected.size();
     result.rejected_commands = std::move(rejected);
 
@@ -213,21 +214,21 @@ TickResult Runtime<S>::tick() {
         result.status = ExecutionStatus::Success;
     }
 
-    rebuild_type_counts();
+    this->rebuild_type_counts();
     return result;
 }
 
 template <typename S>
 bool Runtime<S>::has_block(core::Identity identity) const {
-    return blocks_.contains(identity);
+    return this->blocks_.contains(identity);
 }
 
 template <typename S>
 void Runtime<S>::rebuild_type_counts() {
-    type_counts_.clear();
-    for (const auto& [id, block] : blocks_) {
+    this->type_counts_.clear();
+    for (const auto& [id, block] : this->blocks_) {
         (void)id;
-        type_counts_[block.type_id()]++;
+        this->type_counts_[block.type_id()]++;
     }
 }
 

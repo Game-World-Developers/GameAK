@@ -1,12 +1,6 @@
 {
     cmdlines = {
         "xmake run gameak_test",
-        "xmake ",
-        "xmake ",
-        "xmake run",
-        "xmake build",
-        "xmake build gameak_test",
-        "xmake run gameak_test",
         "xmake build gameak",
         "xmake build gameak_test",
         "xmake clean",
@@ -63,6 +57,12 @@
         "xmake run gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test"
     }

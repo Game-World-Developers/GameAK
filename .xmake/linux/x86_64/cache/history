@@ -1,9 +1,5 @@
 {
     cmdlines = {
-        "xmake lua /home/kitsune/.local/share/xmake/actions/build/cleaner.lua",
-        "xmake f",
-        "xmake ",
-        "xmake f",
         "xmake ",
         "xmake ",
         "xmake ",
@@ -62,6 +58,10 @@
         "xmake run gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test",
+        "xmake build gameak_test",
+        "xmake build gameak_test",
+        "xmake run gameak_test",
+        "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake build gameak_test",
         "xmake run gameak_test"

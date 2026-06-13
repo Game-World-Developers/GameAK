@@ -1,6 +1,7 @@
 #include "gameak/core/Identity.h"
 #include "gameak/core/Result.h"
 #include "gameak/core/Error.h"
+#include "gameak/core/flat_vector.h"
 #include "gameak/runtime/Runtime.h"
 #include "gameak/runtime/Controller.h"
 #include "gameak/runtime/Command.h"
@@ -12,6 +13,10 @@
 
 using namespace gameak::core;
 using namespace gameak::runtime;
+
+using FlatVec4 = gameak::core::flat_vector<int, 4>;
+using FlatVec2 = gameak::core::flat_vector<int, 2>;
+using FlatVec3 = gameak::core::flat_vector<int, 3>;
 
 int main(int argc, char* argv[]) {
     cest_init(argc, argv);
@@ -37,6 +42,75 @@ int main(int argc, char* argv[]) {
             expect(a != c).toBeTruthy();
             expect(a < c).toBeTruthy();
             expect(c > a).toBeTruthy();
+        });
+    });
+
+    describe("Core - flat_vector", {
+        it("stores elements inline for small sizes", {
+            FlatVec4 v;
+            expect(v.empty()).toBeTruthy();
+            expect(v.capacity() == 4).toBeTruthy();
+
+            v.push_back(10);
+            v.push_back(20);
+            v.push_back(30);
+
+            expect(v.size() == 3).toBeTruthy();
+            expect(v[0] == 10).toBeTruthy();
+            expect(v[1] == 20).toBeTruthy();
+            expect(v[2] == 30).toBeTruthy();
+            expect(v.data() != nullptr).toBeTruthy();
+        });
+
+        it("grows to heap when inline capacity exceeded", {
+            FlatVec2 v;
+            v.push_back(1);
+            v.push_back(2);
+            expect(v.size() == 2).toBeTruthy();
+
+            v.push_back(3);
+            expect(v.size() == 3).toBeTruthy();
+            expect(v[0] == 1).toBeTruthy();
+            expect(v[1] == 2).toBeTruthy();
+            expect(v[2] == 3).toBeTruthy();
+        });
+
+        it("supports pop_back and clear", {
+            FlatVec2 v;
+            v.push_back(1);
+            v.push_back(2);
+            v.push_back(3);
+            expect(v.size() == 3).toBeTruthy();
+
+            v.pop_back();
+            expect(v.size() == 2).toBeTruthy();
+            expect(v.back() == 2).toBeTruthy();
+
+            v.clear();
+            expect(v.empty()).toBeTruthy();
+        });
+
+        it("supports iteration", {
+            FlatVec3 v;
+            v.push_back(1);
+            v.push_back(2);
+            v.push_back(3);
+
+            int sum = 0;
+            for (auto x : v) { sum += x; }
+            expect(sum == 6).toBeTruthy();
+        });
+
+        it("supports resize", {
+            FlatVec2 v;
+            v.push_back(10);
+            v.push_back(20);
+            v.push_back(30);
+
+            v.resize(2);
+            expect(v.size() == 2).toBeTruthy();
+            expect(v[0] == 10).toBeTruthy();
+            expect(v[1] == 20).toBeTruthy();
         });
     });
 

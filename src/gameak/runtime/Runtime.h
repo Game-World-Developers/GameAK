@@ -64,7 +64,10 @@ public:
     TickResult tick();
 
     bool has_block(core::Identity identity) const;
-    size_t block_count(uint32_t type_id) const;
+    size_t block_count(uint32_t type_id) const {
+        auto it = type_counts_.find(type_id);
+        return it != type_counts_.end() ? it->second : 0;
+    }
 
     const RuntimeConfig& config() const { return config_; }
 
@@ -83,8 +86,11 @@ private:
     std::unordered_map<core::Identity, DataBlock> blocks_;
     std::unordered_map<uint32_t, BlockTypeDescriptor> types_;
     std::vector<Controller> controllers_;
+    void rebuild_type_counts();
+
     CommandId next_command_id_{0};
     uint64_t next_identity_{0};
+    std::unordered_map<uint32_t, size_t> type_counts_;
 };
 
 } // namespace gameak::runtime

@@ -64,6 +64,7 @@ core::Result<core::Identity> Runtime::create_block(uint32_t type_id) {
     auto& desc = it->second;
     core::Identity id{++next_identity_};
     blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    type_counts_[type_id]++;
     SPDLOG_DEBUG("Created block {} of type {}", id.value(), type_id);
     return id;
 }
@@ -78,6 +79,7 @@ core::Result<void> Runtime::destroy_block(core::Identity identity) {
         SPDLOG_WARN("Cannot destroy block {}: not found", identity.value());
         return core::Error{core::ErrorCode::BlockNotFound, "Block not found"};
     }
+    type_counts_[it->second.type_id()]--;
     blocks_.erase(it);
     SPDLOG_DEBUG("Destroyed block {}", identity.value());
     return {};
@@ -133,6 +135,7 @@ TickResult Runtime::tick() {
         result.status = ExecutionStatus::Success;
     }
 
+    rebuild_type_counts();
     return result;
 }
 
@@ -140,11 +143,11 @@ bool Runtime::has_block(core::Identity identity) const {
     return blocks_.contains(identity);
 }
 
-size_t Runtime::block_count(uint32_t type_id) const {
-    return std::count_if(blocks_.begin(), blocks_.end(),
-                         [type_id](const auto& pair) {
-                             return pair.second.type_id() == type_id;
-                         });
+void Runtime::rebuild_type_counts() {
+    type_counts_.clear();
+    for (const auto& [id, block] : blocks_) {
+        type_counts_[block.type_id()]++;
+    }
 }
 
 } // namespace gameak::runtime

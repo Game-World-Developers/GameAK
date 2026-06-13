@@ -136,7 +136,7 @@ int main(int argc, char* argv[]) {
             auto block = rt.create_block(1);
             expect(block.has_value()).toBeTruthy();
 
-            auto submit = rt.submit_command(Command{CommandDestroyBlock{block.value()}});
+            auto submit = rt.submit_command(Command{CommandDestroyBlock{{block.value()}}});
             expect(submit.has_value()).toBeTruthy();
 
             auto result = rt.tick();
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
                 reinterpret_cast<std::byte*>(&value),
                 reinterpret_cast<std::byte*>(&value) + sizeof(int));
 
-            auto submit = rt.submit_command(Command{CommandSetField{block.value(), 0, bytes}});
+            auto submit = rt.submit_command(Command{CommandSetField{{block.value()}, 0, bytes}});
             expect(submit.has_value()).toBeTruthy();
 
             auto result = rt.tick();
@@ -175,6 +175,30 @@ int main(int argc, char* argv[]) {
             int stored;
             std::memcpy(&stored, it->second.data(), sizeof(int));
             expect(stored).toEqual(42);
+        });
+
+        it("destroys multiple blocks with one command", {
+            Runtime rt;
+            BlockTypeDescriptor desc;
+            desc.type_id = 1;
+            desc.size = sizeof(int);
+            desc.alignment = alignof(int);
+            desc.name = "test";
+            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+            auto b1 = rt.create_block(1);
+            auto b2 = rt.create_block(1);
+            auto b3 = rt.create_block(1);
+            expect(b1.has_value() && b2.has_value() && b3.has_value()).toBeTruthy();
+
+            auto submit = rt.submit_command(
+                Command{CommandDestroyBlock{{b1.value(), b3.value()}}});
+            expect(submit.has_value()).toBeTruthy();
+
+            auto result = rt.tick();
+            expect(result.status == ExecutionStatus::Success).toBeTruthy();
+            expect(rt.block_count(1) == 1).toBeTruthy();
+            expect(rt.has_block(b2.value())).toBeTruthy();
         });
 
         it("rejects command for unregistered type", {

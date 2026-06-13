@@ -23,25 +23,29 @@ core::Result<void> FifoScheduler::validate(
         }
         case CommandType::DestroyBlock: {
             const auto& payload = std::get<CommandDestroyBlock>(command.payload());
-            if (!payload.target.is_valid()) {
-                return core::Error{core::ErrorCode::InvalidIdentity, "Target identity is invalid"};
-            }
-            if (!blocks.contains(payload.target)) {
-                return core::Error{core::ErrorCode::BlockNotFound, "Target block not found"};
+            for (auto target : payload.targets) {
+                if (!target.is_valid()) {
+                    return core::Error{core::ErrorCode::InvalidIdentity, "Target identity is invalid"};
+                }
+                if (!blocks.contains(target)) {
+                    return core::Error{core::ErrorCode::BlockNotFound, "Target block not found"};
+                }
             }
             return {};
         }
         case CommandType::SetField: {
             const auto& payload = std::get<CommandSetField>(command.payload());
-            if (!payload.target.is_valid()) {
-                return core::Error{core::ErrorCode::InvalidIdentity, "Target identity is invalid"};
-            }
-            auto it = blocks.find(payload.target);
-            if (it == blocks.end()) {
-                return core::Error{core::ErrorCode::BlockNotFound, "Target block not found"};
-            }
-            if (payload.offset + payload.data.size() > it->second.size()) {
-                return core::Error{core::ErrorCode::CommandInvalid, "Field exceeds block size"};
+            for (auto target : payload.targets) {
+                if (!target.is_valid()) {
+                    return core::Error{core::ErrorCode::InvalidIdentity, "Target identity is invalid"};
+                }
+                auto it = blocks.find(target);
+                if (it == blocks.end()) {
+                    return core::Error{core::ErrorCode::BlockNotFound, "Target block not found"};
+                }
+                if (payload.offset + payload.data.size() > it->second.size()) {
+                    return core::Error{core::ErrorCode::CommandInvalid, "Field exceeds block size"};
+                }
             }
             return {};
         }
@@ -69,17 +73,21 @@ core::Result<void> FifoScheduler::execute(
         }
         case CommandType::DestroyBlock: {
             const auto& payload = std::get<CommandDestroyBlock>(command.payload());
-            blocks.erase(payload.target);
+            for (auto target : payload.targets) {
+                blocks.erase(target);
+            }
             return {};
         }
         case CommandType::SetField: {
             auto& payload = std::get<CommandSetField>(command.payload());
-            auto it = blocks.find(payload.target);
-            if (it == blocks.end()) {
-                return core::Error{core::ErrorCode::BlockNotFound};
+            for (auto target : payload.targets) {
+                auto it = blocks.find(target);
+                if (it == blocks.end()) {
+                    return core::Error{core::ErrorCode::BlockNotFound};
+                }
+                std::memcpy(static_cast<std::byte*>(it->second.data()) + payload.offset,
+                            payload.data.data(), payload.data.size());
             }
-            std::memcpy(static_cast<std::byte*>(it->second.data()) + payload.offset,
-                        payload.data.data(), payload.data.size());
             return {};
         }
     }

@@ -22,11 +22,11 @@ struct CommandCreateBlock {
 };
 
 struct CommandDestroyBlock {
-    core::Identity target;
+    std::vector<core::Identity> targets;
 };
 
 struct CommandSetField {
-    core::Identity target;
+    std::vector<core::Identity> targets;
     size_t offset;
     std::vector<std::byte> data;
 };

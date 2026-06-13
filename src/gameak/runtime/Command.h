@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gameak/core/Error.h"
 #include "gameak/core/Identity.h"
 #include "gameak/core/Result.h"
 
@@ -10,6 +11,11 @@
 namespace gameak::runtime {
 
 using CommandId = uint64_t;
+
+struct RejectedCommand {
+    CommandId id;
+    core::Error error;
+};
 
 enum class CommandType : uint32_t {
     CreateBlock,

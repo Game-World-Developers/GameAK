@@ -208,6 +208,8 @@ int main(int argc, char* argv[]) {
             auto result = rt.tick();
             expect(result.commands_rejected == 1).toBeTruthy();
             expect(result.commands_executed == 0).toBeTruthy();
+            expect(result.rejected_commands.size() == 1).toBeTruthy();
+            expect(result.rejected_commands[0].error.code() == ErrorCode::TypeNotRegistered).toBeTruthy();
         });
 
         it("cancels a pending command", {

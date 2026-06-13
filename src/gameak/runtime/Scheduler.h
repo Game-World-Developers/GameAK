@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <vector>
 
 namespace gameak::runtime {
 
@@ -21,6 +22,8 @@ public:
         uint64_t& next_identity) = 0;
 
     virtual void cancel(CommandId id) = 0;
+
+    virtual std::vector<RejectedCommand> take_rejected() = 0;
 
     virtual size_t pending_count() const = 0;
     virtual size_t executed_count() const = 0;

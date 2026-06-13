@@ -17,6 +17,10 @@ public:
 
     void cancel(CommandId id) override { cancelled_.insert(id); }
 
+    std::vector<RejectedCommand> take_rejected() override {
+        return std::move(rejected_details_);
+    }
+
     size_t pending_count() const override { return queue_.size(); }
     size_t executed_count() const override { return executed_; }
     size_t rejected_count() const override { return rejected_; }
@@ -33,6 +37,7 @@ private:
 
     std::queue<Command> queue_;
     std::unordered_set<CommandId> cancelled_;
+    std::vector<RejectedCommand> rejected_details_;
     size_t executed_{0};
     size_t rejected_{0};
     size_t skipped_{0};

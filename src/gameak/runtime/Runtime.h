@@ -39,6 +39,7 @@ struct TickResult {
     size_t commands_rejected{0};
     size_t controllers_executed{0};
     ExecutionStatus status{ExecutionStatus::Success};
+    std::vector<RejectedCommand> rejected_commands;
 };
 
 class Runtime {

@@ -112,12 +112,14 @@ core::Result<void> FifoScheduler::process_pending(
         auto validation = validate(command, blocks, types);
         if (!validation) {
             rejected_++;
+            rejected_details_.push_back({command.id(), validation.error()});
             continue;
         }
 
         auto execution = execute(command, blocks, types, next_identity);
         if (!execution) {
             rejected_++;
+            rejected_details_.push_back({command.id(), execution.error()});
         } else {
             executed_++;
         }

@@ -119,6 +119,7 @@ TickResult Runtime::tick() {
     auto sr = scheduler_->process_pending(mutable_blocks(), types_, next_identity());
     result.commands_executed = scheduler_->executed_count();
     result.commands_rejected = scheduler_->rejected_count();
+    result.rejected_commands = scheduler_->take_rejected();
 
     if (!sr) {
         SPDLOG_ERROR("Scheduler critical failure");

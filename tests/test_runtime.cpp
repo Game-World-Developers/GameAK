@@ -1,4 +1,3 @@
-#include "cest.h"
 #include "gameak/core/Identity.h"
 #include "gameak/core/Result.h"
 #include "gameak/core/Error.h"
@@ -8,6 +7,8 @@
 
 #include <cstring>
 #include <vector>
+
+#include "cest.h"
 
 using namespace gameak::core;
 using namespace gameak::runtime;

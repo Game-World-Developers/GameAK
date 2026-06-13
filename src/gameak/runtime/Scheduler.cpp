@@ -1,15 +1,14 @@
-#include "Scheduler.h"
-
+#include "FifoScheduler.h"
 #include <cstring>
 #include <utility>
 
 namespace gameak::runtime {
 
-void Scheduler::enqueue(Command command) {
+void FifoScheduler::enqueue(Command command) {
     queue_.push(std::move(command));
 }
 
-core::Result<void> Scheduler::validate(
+core::Result<void> FifoScheduler::validate(
     const Command& command,
     const std::unordered_map<core::Identity, DataBlock>& blocks,
     const std::unordered_map<uint32_t, BlockTypeDescriptor>& types) {
@@ -50,7 +49,7 @@ core::Result<void> Scheduler::validate(
     return core::Error{core::ErrorCode::InternalError, "Unknown command type"};
 }
 
-core::Result<void> Scheduler::execute(
+core::Result<void> FifoScheduler::execute(
     Command& command,
     std::unordered_map<core::Identity, DataBlock>& blocks,
     const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
@@ -87,7 +86,7 @@ core::Result<void> Scheduler::execute(
     return core::Error{core::ErrorCode::InternalError};
 }
 
-core::Result<void> Scheduler::process_pending(
+core::Result<void> FifoScheduler::process_pending(
     std::unordered_map<core::Identity, DataBlock>& blocks,
     std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity) {

@@ -8,6 +8,7 @@
 #include "gameak/core/Result.h"
 
 #include <cstdint>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -65,7 +66,8 @@ public:
 
     const RuntimeConfig& config() const { return config_; }
 
-    Scheduler& scheduler() { return scheduler_; }
+    Scheduler& scheduler() { return *scheduler_; }
+    const Scheduler& scheduler() const { return *scheduler_; }
     const std::unordered_map<core::Identity, DataBlock>& blocks() const { return blocks_; }
     std::unordered_map<core::Identity, DataBlock>& mutable_blocks() { return blocks_; }
     const std::unordered_map<uint32_t, BlockTypeDescriptor>& block_types() const { return types_; }
@@ -75,7 +77,7 @@ private:
     void apply_log_level(LogLevel level);
 
     RuntimeConfig config_;
-    Scheduler scheduler_;
+    std::unique_ptr<Scheduler> scheduler_;
     std::unordered_map<core::Identity, DataBlock> blocks_;
     std::unordered_map<uint32_t, BlockTypeDescriptor> types_;
     std::vector<Controller> controllers_;

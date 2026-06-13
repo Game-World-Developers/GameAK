@@ -1,4 +1,5 @@
 #include "Runtime.h"
+#include "FifoScheduler.h"
 
 #include <algorithm>
 #include <spdlog/spdlog.h>
@@ -23,7 +24,8 @@ spdlog::level::level_enum to_spdlog_level(LogLevel level) {
 } // namespace
 
 Runtime::Runtime(RuntimeConfig config)
-    : config_{config} {
+    : config_{config}
+    , scheduler_{std::make_unique<FifoScheduler>()} {
     apply_log_level(config_.log_level);
     SPDLOG_DEBUG("Runtime created");
 }
@@ -82,8 +84,8 @@ core::Result<void> Runtime::destroy_block(core::Identity identity) {
 }
 
 core::Result<void> Runtime::submit_command(Command command) {
-    scheduler_.enqueue(std::move(command));
-    SPDLOG_TRACE("Command enqueued (pending: {})", scheduler_.pending_count());
+    scheduler_->enqueue(std::move(command));
+    SPDLOG_TRACE("Command enqueued (pending: {})", scheduler_->pending_count());
     return {};
 }
 
@@ -91,7 +93,7 @@ TickResult Runtime::tick() {
     TickResult result;
 
     SPDLOG_DEBUG("Tick start (pending commands: {}, controllers: {})",
-                 scheduler_.pending_count(), controllers_.size());
+                 scheduler_->pending_count(), controllers_.size());
 
     StateView state_view{*this};
 
@@ -105,11 +107,11 @@ TickResult Runtime::tick() {
         result.controllers_executed++;
     }
 
-    SPDLOG_DEBUG("Controllers done, processing {} pending commands", scheduler_.pending_count());
+    SPDLOG_DEBUG("Controllers done, processing {} pending commands", scheduler_->pending_count());
 
-    auto sr = scheduler_.process_pending(mutable_blocks(), types_, next_identity());
-    result.commands_executed = scheduler_.executed_count();
-    result.commands_rejected = scheduler_.rejected_count();
+    auto sr = scheduler_->process_pending(mutable_blocks(), types_, next_identity());
+    result.commands_executed = scheduler_->executed_count();
+    result.commands_rejected = scheduler_->rejected_count();
 
     if (!sr) {
         SPDLOG_ERROR("Scheduler critical failure");

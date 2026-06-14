@@ -33,10 +33,15 @@ public:
         return derived().take_rejected_impl();
     }
 
+    void reset_counts() { derived().reset_counts_impl(); }
+
     size_t pending_count() const { return derived().pending_count_impl(); }
     size_t executed_count() const { return derived().executed_count_impl(); }
     size_t rejected_count() const { return derived().rejected_count_impl(); }
     size_t skipped_count() const { return derived().skipped_count_impl(); }
+
+    const std::vector<Command>& history() const { return derived().history_impl(); }
+    void clear_history() { derived().clear_history_impl(); }
 
 protected:
     ~SchedulerBase() = default;

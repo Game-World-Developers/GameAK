@@ -1,24 +1,29 @@
-# SPEC-004: Coding and Design Standards
+# Verdict: SPEC-004
 
-**Validation timestamp:** 2026-06-13
-
+**Spec:** SPEC-004-GameAK-DevelopmentStandards.md  
+**Validation timestamp:** 2026-06-13  
 **Verdict:** READY
 
-## Assessment
+## Resolved issues
 
-SPEC-004 defines design principles (Simplicity First, Single Responsibility, Explicit Behavior, Composition Over Inheritance, Dependency Inversion, Law of Demeter), coding standards (naming, functions, comments, source organization), and data-oriented exceptions. All three open questions have been answered.
+* **Self-referential paradox:** Testing Requirements section was scoped to "behavioral specs" (SPEC-005 through SPEC-016). SPEC-004 is explicitly a meta-spec and exempt. Subjective/qualitative constraints (naming, readability, etc.) are exempt from test requirements.
+* **Constraint-testability conflict:** Only verifiable runtime behaviors require tests. Style guidelines are explicitly excluded.
 
-Key decisions:
-- Concepts preferred over inheritance
-- No rigid function line-count limits (readability over metrics)
-- Exceptions prohibited in runtime core (use Result types, error objects, status codes)
+## Pre-existing unresolved questions (tracked separately)
 
-## Open Questions
+These were present before the edit and are outside the scope of this change:
 
-None. All three open questions have been answered.
+1. Object Calisthenics rules not enumerated.
+2. Runtime Core boundary not defined.
+3. "Plain data structure" / "Value type" / etc. not defined.
+4. Law of Demeter "direct collaborators" not defined.
+5. Simplicity First vs. Dependency Inversion conflict — no tiebreaker.
+6. Many subjective constraints unverifiable (by design — see scope exemption above).
+7. CI enforcement mechanism for status changes not specified.
+
+These do not block the Testing Requirements addition. They may be addressed in a future revision.
 
 ## Notes
 
-- This is a standards document, not an implementation spec. It provides guidelines for code written from other specs.
-- The data-oriented design exceptions (plain data structures, value types, bit-oriented structures) are important for the GameAK domain and are clearly delineated.
-- The `Status: DRAFT` header should be updated to `READY` once this verdict is accepted.
+* TEMPLATE.md was also updated to include Test: annotations per Scenario and Test verification: per Constraint.
+* No implementation changes needed — this is a process/specification change only.

@@ -1,6 +1,6 @@
 # SPEC-016: Red-Black Tree
 
-Status: READY
+Status: IMPLEMENTED
 
 Last validated by Ralph: 2026-06-13
 

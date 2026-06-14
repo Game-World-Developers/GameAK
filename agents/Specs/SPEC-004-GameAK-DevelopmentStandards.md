@@ -154,6 +154,44 @@ Performance-critical code may prioritize data locality over object-oriented puri
 
 ---
 
+## Testing Requirements
+
+### Scope
+
+This section applies to **behavioral specs** (those that define runtime behavior, such as SPEC-005 through SPEC-016).
+
+This specification (SPEC-004) is a **meta-spec** governing development process. It defines principles and guidelines that are qualitative in nature. The testing requirements below apply to behavioral specs and their implementation, not to this document itself.
+
+### Spec-Test Parity
+
+Every behavior described in a behavioral spec must have an equivalent automated test.
+
+This means:
+
+* Each **Scenario** (Happy Path, Edge Case, etc.) in the spec must map to at least one test case.
+* Each **Constraint** that expresses verifiable runtime behavior must be verifiable through tests.
+* Each **Open Question** answer, once resolved, must be reflected in tests.
+
+Subjective or qualitative constraints (e.g., naming conventions, readability guidelines, design principles) are exempt from automated test verification.
+
+### Update Discipline
+
+When a behavioral spec changes:
+
+1. Update or add tests that cover the changed behavior **before** modifying implementation code.
+2. Tests must fail **before** the implementation change and pass **after** it (red-green-refactor).
+3. A behavioral spec must not be promoted to `IMPLEMENTED` status unless all its verifiable behaviors are covered by passing tests.
+
+### Test Location
+
+Tests must live under `Tests/` and follow the naming convention `test_<spec-area>.cpp`.
+
+### Enforcement
+
+The CI pipeline (or equivalent validation step) should reject a behavioral spec status change to `IMPLEMENTED` if corresponding tests are missing or failing.
+
+---
+
 ## Out of Scope
 
 * Formatting tools.

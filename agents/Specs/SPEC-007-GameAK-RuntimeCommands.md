@@ -1,6 +1,6 @@
 # SPEC-007: Runtime Commands
 
-Status: READY
+Status: IMPLEMENTED
 
 Last validated by Ralph: never
 

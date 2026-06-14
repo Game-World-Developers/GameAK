@@ -1,8 +1,8 @@
 # SPEC-009: Runtime API
 
-Status: READY
+Status: IMPLEMENTED
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -33,6 +33,37 @@ Within a single `tick()`, execution proceeds in the following order:
 3. **Result Reporting**: A TickResult is produced summarizing the tick execution.
 
 Commands submitted between ticks (via `submit_command()`) are queued and processed during the next `tick()`. This ordering guarantees deterministic execution: given the same state and same Controllers, the same Commands are produced and applied in the same order.
+
+### Pause / Resume
+
+The Runtime must provide an API for pausing and resuming tick execution.
+
+When paused:
+- `tick()` returns immediately with an empty TickResult (all fields zero).
+- No Controllers are executed and no Commands are processed.
+- Commands submitted while paused are queued and will be processed after resume.
+
+**Test:** `test_runtime.cpp` — `pause skips tick execution`, `resume allows tick execution after pause`, `paused runtime still accepts commands but does not process them`
+
+### Fixed Timestep
+
+The Runtime must provide an API for configuring a fixed timestep.
+
+When a fixed timestep is set:
+- `tick(time_delta)` accumulates the delta into an internal accumulator.
+- As long as the accumulator is greater than or equal to the fixed timestep, sub-ticks are executed using the fixed timestep as the delta passed to Controllers via `StateView::time_delta()`.
+- Each sub-tick executes all Controllers and processes all pending Commands.
+- Combined results across sub-ticks are returned with summed counters and worst-status propagation.
+
+The fixed timestep can be cleared to revert to variable timestep mode.
+
+```cpp
+void set_fixed_timestep(float dt);
+void clear_fixed_timestep();
+float fixed_timestep() const;
+```
+
+**Tests:** `test_runtime.cpp` — `fixed timestep accumulates and runs multiple sub-ticks`, `fixed timestep sub-ticks see the fixed delta, not accumulated delta`, `clear_fixed_timestep reverts to variable timestep`
 
 ### Data Block Lifecycle
 
@@ -67,6 +98,64 @@ The tick function must return execution results.
 The Runtime must provide an API for checking Data Block existence by identity.
 
 The Runtime must provide an API for counting Data Blocks by type.
+
+The Runtime must provide an API for finding blocks by type identifier:
+```cpp
+std::vector<core::Identity> find_blocks_by_type(uint32_t type_id) const;
+```
+
+The Runtime must provide an API for finding blocks by arbitrary predicate:
+```cpp
+std::vector<core::Identity> find_blocks(
+    std::function<bool(const DataBlock&)> pred) const;
+```
+
+**Tests:** `test_runtime.cpp` — `find_blocks_by_type returns blocks of matching type`, `find_blocks with predicate filters correctly`, `find_blocks returns empty when nothing matches`, `find_blocks returns all blocks when predicate always true`
+
+### Serialization (Snapshot)
+
+The Runtime must provide an API for capturing the full simulation state and restoring it later.
+
+The `Snapshot` struct contains:
+- All Data Blocks (identity, type_id, raw data)
+- All registered Block Type Descriptors
+- The next identity counter
+
+```cpp
+struct Snapshot {
+    std::unordered_map<core::Identity, DataBlock> blocks;
+    std::unordered_map<uint32_t, BlockTypeDescriptor> types;
+    uint64_t next_identity;
+};
+
+Snapshot save() const;
+void load(const Snapshot& snapshot);
+```
+
+`load()` replaces all current state with the snapshot's state and rebuilds internal type counts.
+
+The scheduler state (pending commands, history) is NOT captured in the snapshot.
+
+**Tests:** `test_runtime.cpp` — `save captures current state`, `load restores previously saved state`, `load rebuilds type_counts`
+
+### Block Relationships
+
+The Runtime must provide an API for creating and querying parent-child relationships between blocks.
+
+Relationships form a bidirectional graph:
+```cpp
+Result<void> relate(Identity parent, Identity child);
+Result<void> unrelate(Identity parent, Identity child);
+std::vector<Identity> children_of(Identity parent) const;
+std::vector<Identity> parents_of(Identity child) const;
+```
+
+Constraints:
+- Both identities must be valid and reference existing blocks.
+- A block cannot be related to itself.
+- Relationships are not automatically cleaned up when blocks are destroyed.
+
+**Tests:** `test_runtime.cpp` — `relate creates parent-child edge`, `unrelate removes parent-child edge`, `multiple children per parent`, `multiple parents per child`, `relating self fails`, `relating nonexistent block fails`
 
 ### Type Registration
 

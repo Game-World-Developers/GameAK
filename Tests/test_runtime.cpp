@@ -1,4 +1,7 @@
+// GameAK headers first (pull in standard library headers)
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/platform.h"
+#include "GameAk/Core/simd.h"
 #include "GameAk/Core/result.h"
 #include "GameAk/Core/error.h"
 #include "GameAk/Core/flat_vector.h"
@@ -8,773 +11,819 @@
 #include "GameAk/Runtime/runtime.h"
 #include "GameAk/Runtime/controller.h"
 #include "GameAk/Runtime/command.h"
+#include "GameAk/Runtime/priority_scheduler.h"
 
+// Standard library headers
 #include <cstring>
+#include <memory>
+#include <string>
 #include <vector>
 
+// Cest must be included AFTER all headers that use std::atomic
 #include "cest.h"
+
+// Test header files (use cest macros)
+#include "test_identity.h"
+#include "test_flat_vector.h"
+#include "test_intrusive_list.h"
+#include "test_error.h"
+#include "test_command.h"
+#include "test_controller.h"
+#include "test_avl_tree.h"
+#include "test_rb_tree.h"
 
 using namespace gameak::core;
 using namespace gameak::runtime;
 
-using FlatVec4 = gameak::core::flat_vector<int, 4>;
-using FlatVec2 = gameak::core::flat_vector<int, 2>;
-using FlatVec3 = gameak::core::flat_vector<int, 3>;
+using DefaultRuntime = Runtime<FifoScheduler>;
 
-struct TestNode : gameak::core::intrusive_node {
-    int value;
-    explicit TestNode(int v) : value(v) {}
-};
+inline void run_runtime_tests() {
+describe("Runtime", {
+    it("creates and destroys a block", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        auto reg = rt.register_block_type(desc);
+        expect(reg.has_value()).toBeTruthy();
 
-using TestList = gameak::core::intrusive_list<TestNode>;
-using AVLTreeIntStr = gameak::core::avl_tree<int, std::string>;
-using RBTreeIntStr = gameak::core::rb_tree<int, std::string>;
-using DefaultRuntime = gameak::runtime::Runtime<gameak::runtime::FifoScheduler>;
+        auto block = rt.create_block(1);
+        expect(block.has_value()).toBeTruthy();
+        expect(rt.has_block(block.value())).toBeTruthy();
 
-static void avl_rotation_test(const int* keys, int n) {
-    AVLTreeIntStr tree;
-    for (int i = 0; i < n; ++i) tree.insert(keys[i], "x");
-    expect(tree.size() == (size_t)n).toBeTruthy();
-    expect(tree.check_balance_factors()).toBeTruthy();
-    int prev = -1;
-    int cnt = 0;
-    for (auto iter = tree.begin(); iter != tree.end(); ++iter) {
-        expect(iter->first > prev).toBeTruthy();
-        prev = iter->first;
-        ++cnt;
-    }
-    expect(cnt == n).toBeTruthy();
+        auto destroy = rt.destroy_block(block.value());
+        expect(destroy.has_value()).toBeTruthy();
+        expect(rt.has_block(block.value())).toBeFalsy();
+    });
+
+    it("fails to create block with unregistered type", {
+        DefaultRuntime rt;
+        auto block = rt.create_block(99);
+        expect(block.has_value()).toBeFalsy();
+        expect(block.error().code() == ErrorCode::TypeNotRegistered).toBeTruthy();
+    });
+
+    it("rejects duplicate type registration", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        auto r1 = rt.register_block_type(desc);
+        expect(r1.has_value()).toBeTruthy();
+        auto r2 = rt.register_block_type(desc);
+        expect(r2.has_value()).toBeFalsy();
+        expect(r2.error().code() == ErrorCode::DuplicateRegistration).toBeTruthy();
+    });
+
+    it("creates with custom config", {
+        RuntimeConfig cfg;
+        cfg.log_level = LogLevel::Error;
+        Runtime<FifoScheduler> rt{cfg};
+        expect(rt.config().log_level == LogLevel::Error).toBeTruthy();
+    });
+
+    it("CriticalFailure enum value exists", {
+        TickResult tr;
+        tr.status = ExecutionStatus::CriticalFailure;
+        expect(tr.status == ExecutionStatus::CriticalFailure).toBeTruthy();
+    });
+
+    it("identity destroyed and not reused on new blocks", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        // Create blocks, note the IDs
+        auto b1 = rt.create_block(1);
+        auto b2 = rt.create_block(1);
+        auto b3 = rt.create_block(1);
+        expect(b1.has_value()).toBeTruthy();
+        expect(b2.has_value()).toBeTruthy();
+        expect(b3.has_value()).toBeTruthy();
+        auto id1 = b1.value();
+        auto id2 = b2.value();
+
+        // Destroy them
+        expect(rt.destroy_block(id1).has_value()).toBeTruthy();
+        expect(rt.destroy_block(id2).has_value()).toBeTruthy();
+
+        // Create new blocks - IDs must be fresh, not reused
+        auto b4 = rt.create_block(1);
+        auto b5 = rt.create_block(1);
+        expect(b4.has_value()).toBeTruthy();
+        expect(b5.has_value()).toBeTruthy();
+
+        // New IDs must be greater than the destroyed ones
+        expect(b4.value().value() > id2.value()).toBeTruthy();
+        expect(b5.value().value() > b4.value().value()).toBeTruthy();
+
+        // Destroyed IDs must not appear
+        expect(b4.value() != id1).toBeTruthy();
+        expect(b4.value() != id2).toBeTruthy();
+        expect(b5.value() != id1).toBeTruthy();
+        expect(b5.value() != id2).toBeTruthy();
+    });
+
+    it("identities are monotonically increasing", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto b1 = rt.create_block(1);
+        auto b2 = rt.create_block(1);
+        auto b3 = rt.create_block(1);
+        expect(b1.has_value()).toBeTruthy();
+        expect(b2.has_value()).toBeTruthy();
+        expect(b3.has_value()).toBeTruthy();
+
+        // IDs start at 1 and increase monotonically
+        expect(b1.value().value() == 1).toBeTruthy();
+        expect(b2.value().value() == 2).toBeTruthy();
+        expect(b3.value().value() == 3).toBeTruthy();
+    });
+
+    it("commands submitted between ticks are queued for next tick", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        // Submit command without ticking
+        auto id = rt.submit_command(Command{CommandCreateBlock{1}});
+        expect(id.has_value()).toBeTruthy();
+
+        // Block should not exist yet (command hasn't been processed)
+        // We can't easily check this directly since blocks aren't created yet,
+        // but after first tick, it should be processed
+        auto r1 = rt.tick();
+        expect(r1.commands_executed == 1).toBeTruthy();
+        expect(rt.block_count(1) == 1).toBeTruthy();
+    });
+
+    it("diagnostics reports internal state", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto diag = rt.collect_diagnostics();
+        expect(diag.pending_commands == 0).toBeTruthy();
+        expect(diag.blocks_count == 0).toBeTruthy();
+        expect(diag.controllers_count == 0).toBeTruthy();
+
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+
+        auto controller = [](StateView&, CommandProducer&) -> Result<void> { return {}; };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+
+        auto id = rt.submit_command(Command{CommandCreateBlock{1}});
+        expect(id.has_value()).toBeTruthy();
+
+        diag = rt.collect_diagnostics();
+        expect(diag.blocks_count == 2).toBeTruthy();
+        expect(diag.controllers_count == 1).toBeTruthy();
+        expect(diag.pending_commands == 1).toBeTruthy();
+
+        auto result = rt.tick();
+        expect(result.status == ExecutionStatus::Success).toBeTruthy();
+
+        diag = rt.collect_diagnostics();
+        expect(diag.commands_executed == 1).toBeTruthy();
+        expect(diag.pending_commands == 0).toBeTruthy();
+        expect(diag.blocks_count == 3).toBeTruthy();
+    });
+
+    it("deterministic execution produces identical state", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        // Create a block, run tick
+        auto block = rt.create_block(1);
+        expect(block.has_value()).toBeTruthy();
+
+        auto r1 = rt.tick();
+        expect(r1.status == ExecutionStatus::Success).toBeTruthy();
+        auto count1 = rt.block_count(1);
+        auto has1 = rt.has_block(block.value());
+
+        // Second tick with same state
+        auto r2 = rt.tick();
+        expect(r2.status == ExecutionStatus::Success).toBeTruthy();
+        auto count2 = rt.block_count(1);
+        auto has2 = rt.has_block(block.value());
+
+        // State should be identical
+        expect(count1 == count2).toBeTruthy();
+        expect(has1 == has2).toBeTruthy();
+    });
+
+    it("pause skips tick execution", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        rt.pause();
+        expect(rt.is_paused()).toBeTruthy();
+
+        auto r1 = rt.tick(0.016f);
+        expect(r1.commands_executed == 0).toBeTruthy();
+        expect(r1.controllers_executed == 0).toBeTruthy();
+        expect(r1.status == ExecutionStatus::Success).toBeTruthy();
+    });
+
+    it("resume allows tick execution after pause", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        rt.pause();
+        auto r1 = rt.tick();
+        expect(r1.controllers_executed == 0).toBeTruthy();
+
+        rt.resume();
+        expect(rt.is_paused()).toBeFalsy();
+
+        // Add a controller to verify execution
+        auto controller = [](StateView&, CommandProducer&) -> Result<void> { return {}; };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+
+        auto r2 = rt.tick();
+        expect(r2.controllers_executed == 1).toBeTruthy();
+    });
+
+    it("fixed timestep accumulates and runs multiple sub-ticks", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        // Set fixed timestep to 10ms
+        rt.set_fixed_timestep(0.01f);
+        expect(rt.fixed_timestep() == 0.01f).toBeTruthy();
+
+        // Submit one command per tick via a controller
+        int controller_invocations = 0;
+        auto controller = [&](StateView&, CommandProducer& producer) -> Result<void> {
+            controller_invocations++;
+            auto r = producer.produce(Command{CommandCreateBlock{1}});
+            if (!r) return r.error();
+            return {};
+        };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+
+        // Call tick with 25ms → should produce 2 sub-ticks (10ms each)
+        auto result = rt.tick(0.025f);
+        expect(result.controllers_executed == 2).toBeTruthy();
+        expect(result.commands_executed == 2).toBeTruthy();
+        expect(result.status == ExecutionStatus::Success).toBeTruthy();
+        expect(controller_invocations == 2).toBeTruthy();
+        expect(rt.block_count(1) == 2).toBeTruthy();
+    });
+
+    it("fixed timestep sub-ticks see the fixed delta, not accumulated delta", {
+        DefaultRuntime rt;
+
+        float captured_delta = 0.0f;
+        auto controller = [&](StateView& view, CommandProducer&) -> Result<void> {
+            captured_delta = view.time_delta();
+            return {};
+        };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+
+        const float fixed_dt = 0.005f;
+        rt.set_fixed_timestep(fixed_dt);
+        rt.tick(0.012f); // 2 sub-ticks
+
+        // The time delta seen by controllers should be the fixed dt, not the accumulated amount
+        expect(captured_delta == fixed_dt).toBeTruthy();
+    });
+
+    it("clear_fixed_timestep reverts to variable timestep", {
+        DefaultRuntime rt;
+
+        float captured = 0.0f;
+        auto controller = [&](StateView& view, CommandProducer&) -> Result<void> {
+            captured = view.time_delta();
+            return {};
+        };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+        rt.set_fixed_timestep(0.01f);
+        rt.clear_fixed_timestep();
+        expect(rt.fixed_timestep() == 0.0f).toBeTruthy();
+
+        rt.tick(0.033f);
+        expect(captured == 0.033f).toBeTruthy();
+    });
+
+    it("paused runtime still accepts commands but does not process them", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1;
+        desc.size = sizeof(int);
+        desc.alignment = alignof(int);
+        desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        rt.pause();
+        auto id = rt.submit_command(Command{CommandCreateBlock{1}});
+        expect(id.has_value()).toBeTruthy();
+
+        auto r1 = rt.tick();
+        expect(r1.commands_executed == 0).toBeTruthy();
+        expect(rt.block_count(1) == 0).toBeTruthy();
+
+        // Commands queued while paused should process after resume
+        rt.resume();
+        auto r2 = rt.tick();
+        expect(r2.commands_executed == 1).toBeTruthy();
+        expect(rt.block_count(1) == 1).toBeTruthy();
+    });
+
+    it("find_blocks_by_type returns blocks of matching type", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc1;
+        desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "type1";
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "type2";
+        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
+        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+
+        auto b1 = rt.create_block(1);
+        auto b2 = rt.create_block(2);
+        auto b3 = rt.create_block(1);
+        auto b4 = rt.create_block(2);
+        expect(b1.has_value() && b2.has_value() && b3.has_value() && b4.has_value()).toBeTruthy();
+
+        auto type1_blocks = rt.find_blocks_by_type(1);
+        auto type2_blocks = rt.find_blocks_by_type(2);
+        auto type3_blocks = rt.find_blocks_by_type(99);
+
+        expect(type1_blocks.size() == 2).toBeTruthy();
+        expect(type2_blocks.size() == 2).toBeTruthy();
+        expect(type3_blocks.size() == 0).toBeTruthy();
+
+        // Verify identities are correct
+        expect(type1_blocks[0] == b1.value() || type1_blocks[0] == b3.value()).toBeTruthy();
+        expect(type2_blocks[0] == b2.value() || type2_blocks[0] == b4.value()).toBeTruthy();
+    });
+
+    it("find_blocks with predicate filters correctly", {
+        DefaultRuntime rt;
+        // Register two types with different sizes
+        BlockTypeDescriptor desc1;
+        desc1.type_id = 1; desc1.size = 16; desc1.alignment = alignof(int); desc1.name = "small";
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 2; desc2.size = 64; desc2.alignment = alignof(double); desc2.name = "large";
+        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
+        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+
+        auto b1 = rt.create_block(1);
+        auto b2 = rt.create_block(2);
+        auto b3 = rt.create_block(1);
+        expect(b1.has_value() && b2.has_value() && b3.has_value()).toBeTruthy();
+
+        // Find blocks with size > 32 bytes (should only return type 2 blocks)
+        auto large_blocks = rt.find_blocks([](const DataBlock& block) {
+            return block.size() > 32;
+        });
+
+        expect(large_blocks.size() == 1).toBeTruthy();
+        expect(large_blocks[0] == b2.value()).toBeTruthy();
+    });
+
+    it("find_blocks returns empty when nothing matches", {
+        DefaultRuntime rt;
+        auto result = rt.find_blocks([](const DataBlock&) { return false; });
+        expect(result.size() == 0).toBeTruthy();
+    });
+
+    it("find_blocks returns all blocks when predicate always true", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+
+        auto all = rt.find_blocks([](const DataBlock&) { return true; });
+        expect(all.size() == 3).toBeTruthy();
+    });
+});
 }
 
-static void rb_rotation_test(const int* keys, int n) {
-    RBTreeIntStr tree;
-    for (int i = 0; i < n; ++i) tree.insert(keys[i], "x");
-    expect(tree.size() == (size_t)n).toBeTruthy();
-    expect(tree.check_invariants()).toBeTruthy();
-    int prev = -1;
-    int cnt = 0;
-    for (auto iter = tree.begin(); iter != tree.end(); ++iter) {
-        expect(iter->first > prev).toBeTruthy();
-        prev = iter->first;
-        ++cnt;
-    }
-    expect(cnt == n).toBeTruthy();
+inline void run_event_tests() {
+    using namespace gameak::core;
+    using namespace gameak::runtime;
+    using DefaultRuntime = Runtime<FifoScheduler>;
+
+describe("Events", {
+    it("TickBegin and TickEnd fire during tick", {
+        DefaultRuntime rt;
+        int tick_begin_count = 0;
+        int tick_end_count = 0;
+
+        rt.listen(Runtime<FifoScheduler>::EventType::TickBegin,
+            [&](const Runtime<FifoScheduler>::Event&) { tick_begin_count++; });
+        rt.listen(Runtime<FifoScheduler>::EventType::TickEnd,
+            [&](const Runtime<FifoScheduler>::Event&) { tick_end_count++; });
+
+        rt.tick(0.016f);
+        expect(tick_begin_count == 1).toBeTruthy();
+        expect(tick_end_count == 1).toBeTruthy();
+    });
+
+    it("BlockCreated fires when a block is created via command", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        int created_count = 0;
+        Identity created_id;
+        uint32_t created_type = 0;
+
+        rt.listen(Runtime<FifoScheduler>::EventType::BlockCreated,
+            [&](const Runtime<FifoScheduler>::Event& ev) {
+                created_count++;
+                created_id = ev.identity;
+                created_type = ev.block_type_id;
+            });
+
+        auto id = rt.submit_command(Command{CommandCreateBlock{1}});
+        expect(id.has_value()).toBeTruthy();
+        rt.tick();
+
+        expect(created_count == 1).toBeTruthy();
+        expect(created_id.is_valid()).toBeTruthy();
+        expect(created_type == 1).toBeTruthy();
+    });
+
+    it("BlockDestroyed fires when a block is destroyed via command", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto block = rt.create_block(1);
+        expect(block.has_value()).toBeTruthy();
+
+        int destroyed_count = 0;
+        Identity destroyed_id;
+
+        rt.listen(Runtime<FifoScheduler>::EventType::BlockDestroyed,
+            [&](const Runtime<FifoScheduler>::Event& ev) {
+                destroyed_count++;
+                destroyed_id = ev.identity;
+            });
+
+        auto id = rt.submit_command(Command{CommandDestroyBlock{{block.value()}}});
+        expect(id.has_value()).toBeTruthy();
+        rt.tick();
+
+        expect(destroyed_count == 1).toBeTruthy();
+        expect(destroyed_id == block.value()).toBeTruthy();
+    });
+
+    it("unlisten removes event handler", {
+        DefaultRuntime rt;
+        int call_count = 0;
+
+        auto eid = rt.listen(Runtime<FifoScheduler>::EventType::TickBegin,
+            [&](const Runtime<FifoScheduler>::Event&) { call_count++; });
+
+        rt.tick();
+        expect(call_count == 1).toBeTruthy();
+
+        rt.unlisten(eid);
+        rt.tick();
+        // Should still be 1 since handler was removed
+        expect(call_count == 1).toBeTruthy();
+    });
+
+    it("fixed timestep fires events for each sub-tick", {
+        DefaultRuntime rt;
+        int tick_begin_count = 0;
+
+        rt.listen(Runtime<FifoScheduler>::EventType::TickBegin,
+            [&](const Runtime<FifoScheduler>::Event&) { tick_begin_count++; });
+
+        rt.set_fixed_timestep(0.005f);
+        rt.tick(0.012f); // 2 sub-ticks
+        expect(tick_begin_count == 2).toBeTruthy();
+    });
+
+    it("multiple handlers on same event type", {
+        DefaultRuntime rt;
+        int count_a = 0;
+        int count_b = 0;
+
+        rt.listen(Runtime<FifoScheduler>::EventType::TickBegin,
+            [&](const Runtime<FifoScheduler>::Event&) { count_a++; });
+        rt.listen(Runtime<FifoScheduler>::EventType::TickBegin,
+            [&](const Runtime<FifoScheduler>::Event&) { count_b++; });
+
+        rt.tick();
+        expect(count_a == 1).toBeTruthy();
+        expect(count_b == 1).toBeTruthy();
+    });
+});
+}
+
+inline void run_serialization_tests() {
+    using namespace gameak::core;
+    using namespace gameak::runtime;
+    using DefaultRuntime = Runtime<FifoScheduler>;
+
+describe("Serialization", {
+    it("save captures current state", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto b1 = rt.create_block(1);
+        expect(b1.has_value()).toBeTruthy();
+        auto b2 = rt.create_block(1);
+        expect(b2.has_value()).toBeTruthy();
+
+        auto snap = rt.save();
+        expect(snap.blocks.size() == 2).toBeTruthy();
+        expect(snap.types.size() == 1).toBeTruthy();
+        expect(snap.next_identity >= 2).toBeTruthy();
+    });
+
+    it("load restores previously saved state", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto b1 = rt.create_block(1);
+        auto b2 = rt.create_block(1);
+        auto id1 = b1.value();
+        expect(rt.has_block(id1)).toBeTruthy();
+
+        auto snap = rt.save();
+
+        // Destroy both blocks
+        expect(rt.destroy_block(id1).has_value()).toBeTruthy();
+        expect(rt.destroy_block(b2.value()).has_value()).toBeTruthy();
+        expect(rt.has_block(id1)).toBeFalsy();
+
+        // Restore
+        rt.load(snap);
+        expect(rt.has_block(id1)).toBeTruthy();
+        expect(rt.block_count(1) == 2).toBeTruthy();
+    });
+
+    it("load rebuilds type_counts", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc1;
+        desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "t1";
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "t2";
+        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
+        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+        expect(rt.create_block(2).has_value()).toBeTruthy();
+
+        auto snap = rt.save();
+        expect(rt.block_count(1) == 2).toBeTruthy();
+        expect(rt.block_count(2) == 1).toBeTruthy();
+
+        // Mess up type_counts_ by poking at internal block_count
+        // (just recreate snap and verify load works)
+        DefaultRuntime rt2;
+        rt2.load(snap);
+        expect(rt2.block_count(1) == 2).toBeTruthy();
+        expect(rt2.block_count(2) == 1).toBeTruthy();
+    });
+});
+}
+
+inline void run_relationship_tests() {
+    using namespace gameak::core;
+    using namespace gameak::runtime;
+    using DefaultRuntime = Runtime<FifoScheduler>;
+
+describe("Relationships", {
+    it("relate creates parent-child edge", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto parent = rt.create_block(1);
+        auto child  = rt.create_block(1);
+        expect(parent.has_value() && child.has_value()).toBeTruthy();
+
+        auto rel = rt.relate(parent.value(), child.value());
+        expect(rel.has_value()).toBeTruthy();
+
+        auto children = rt.children_of(parent.value());
+        expect(children.size() == 1).toBeTruthy();
+        expect(children[0] == child.value()).toBeTruthy();
+
+        auto parents = rt.parents_of(child.value());
+        expect(parents.size() == 1).toBeTruthy();
+        expect(parents[0] == parent.value()).toBeTruthy();
+    });
+
+    it("unrelate removes parent-child edge", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto p = rt.create_block(1);
+        auto c = rt.create_block(1);
+        expect(p.has_value() && c.has_value()).toBeTruthy();
+
+        expect(rt.relate(p.value(), c.value()).has_value()).toBeTruthy();
+        expect(rt.unrelate(p.value(), c.value()).has_value()).toBeTruthy();
+
+        expect(rt.children_of(p.value()).size() == 0).toBeTruthy();
+        expect(rt.parents_of(c.value()).size() == 0).toBeTruthy();
+    });
+
+    it("multiple children per parent", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto p = rt.create_block(1);
+        auto c1 = rt.create_block(1);
+        auto c2 = rt.create_block(1);
+        auto c3 = rt.create_block(1);
+        expect(p.has_value() && c1.has_value() && c2.has_value() && c3.has_value()).toBeTruthy();
+
+        expect(rt.relate(p.value(), c1.value()).has_value()).toBeTruthy();
+        expect(rt.relate(p.value(), c2.value()).has_value()).toBeTruthy();
+        expect(rt.relate(p.value(), c3.value()).has_value()).toBeTruthy();
+
+        auto children = rt.children_of(p.value());
+        expect(children.size() == 3).toBeTruthy();
+    });
+
+    it("multiple parents per child", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto p1 = rt.create_block(1);
+        auto p2 = rt.create_block(1);
+        auto c  = rt.create_block(1);
+
+        expect(rt.relate(p1.value(), c.value()).has_value()).toBeTruthy();
+        expect(rt.relate(p2.value(), c.value()).has_value()).toBeTruthy();
+
+        auto parents = rt.parents_of(c.value());
+        expect(parents.size() == 2).toBeTruthy();
+    });
+
+    it("relating self fails", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto b = rt.create_block(1);
+        expect(b.has_value()).toBeTruthy();
+
+        auto rel = rt.relate(b.value(), b.value());
+        expect(rel.has_value()).toBeFalsy();
+        expect(rel.error().code() == ErrorCode::InvalidOperation).toBeTruthy();
+    });
+
+    it("relating nonexistent block fails", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto b = rt.create_block(1);
+        expect(b.has_value()).toBeTruthy();
+
+        Identity fake{999};
+        auto rel = rt.relate(b.value(), fake);
+        expect(rel.has_value()).toBeFalsy();
+    });
+});
+}
+
+
+inline void run_platform_tests() {
+describe("Platform", {
+    it("generic memcopy produces correct result", {
+        char src[64];
+        char dst[64] = {};
+        for (int i = 0; i < 64; ++i) src[i] = static_cast<char>(i);
+        simd::memcopy(dst, src, 64);
+        for (int i = 0; i < 64; ++i) expect(dst[i] == src[i]).toBeTruthy();
+    });
+
+    it("generic memzero produces correct result", {
+        char buf[64];
+        for (int i = 0; i < 64; ++i) buf[i] = static_cast<char>(0xFF);
+        simd::memzero(buf, 64);
+        for (int i = 0; i < 64; ++i) expect(buf[i] == 0).toBeTruthy();
+    });
+
+    it("platform selection uses detect_platform", {
+        auto info = detect_platform();
+        // Generic fallback is always available
+        char src[16] = {1};
+        char dst[16] = {};
+        simd::memcopy(dst, src, 16);
+        expect(dst[0] == 1).toBeTruthy();
+
+        // Architecture-specific optimizations would be selected here
+        // based on info.has_sse2, info.has_avx2, info.has_neon, etc.
+        (void)info;
+    });
+
+    it("detects environment", {
+        auto info = detect_platform();
+        expect(info.compiler != Compiler::Unknown).toBeTruthy();
+        expect(info.arch != Architecture::Unknown).toBeTruthy();
+        expect(info.os != OperatingSystem::Unknown).toBeTruthy();
+        auto s = info.to_string();
+        expect(s.find("Clang") != std::string::npos || s.find("GCC") != std::string::npos).toBeTruthy();
+    });
+});
+}
+
+inline void run_error_handling_tests() {
+describe("Error Handling", {
+    it("fails to destroy invalid identity", {
+        DefaultRuntime rt;
+        auto destroy = rt.destroy_block(Identity::invalid());
+        expect(destroy.has_value()).toBeFalsy();
+        expect(destroy.error().code() == ErrorCode::InvalidIdentity).toBeTruthy();
+    });
+
+    it("fails to destroy nonexistent block", {
+        DefaultRuntime rt;
+        auto destroy = rt.destroy_block(Identity{999});
+        expect(destroy.has_value()).toBeFalsy();
+        expect(destroy.error().code() == ErrorCode::BlockNotFound).toBeTruthy();
+    });
+});
 }
 
 int main(int argc, char* argv[]) {
     cest_init(argc, argv);
-
-    describe("Core - Identity", {
-        it("creates a valid identity", {
-            Identity id{42};
-            expect(id.value() == 42).toBeTruthy();
-            expect(id.is_valid()).toBeTruthy();
-        });
-
-        it("invalid identity is zero", {
-            auto id = Identity::invalid();
-            expect(id.is_valid()).toBeFalsy();
-            expect(id.value() == 0).toBeTruthy();
-        });
-
-        it("compares identities", {
-            Identity a{1};
-            Identity b{1};
-            Identity c{2};
-            expect(a == b).toBeTruthy();
-            expect(a != c).toBeTruthy();
-            expect(a < c).toBeTruthy();
-            expect(c > a).toBeTruthy();
-        });
-    });
-
-    describe("Core - flat_vector", {
-        it("stores elements inline for small sizes", {
-            FlatVec4 v;
-            expect(v.empty()).toBeTruthy();
-            expect(v.capacity() == 4).toBeTruthy();
-
-            v.push_back(10);
-            v.push_back(20);
-            v.push_back(30);
-
-            expect(v.size() == 3).toBeTruthy();
-            expect(v[0] == 10).toBeTruthy();
-            expect(v[1] == 20).toBeTruthy();
-            expect(v[2] == 30).toBeTruthy();
-            expect(v.data() != nullptr).toBeTruthy();
-        });
-
-        it("grows to heap when inline capacity exceeded", {
-            FlatVec2 v;
-            v.push_back(1);
-            v.push_back(2);
-            expect(v.size() == 2).toBeTruthy();
-
-            v.push_back(3);
-            expect(v.size() == 3).toBeTruthy();
-            expect(v[0] == 1).toBeTruthy();
-            expect(v[1] == 2).toBeTruthy();
-            expect(v[2] == 3).toBeTruthy();
-        });
-
-        it("supports pop_back and clear", {
-            FlatVec2 v;
-            v.push_back(1);
-            v.push_back(2);
-            v.push_back(3);
-            expect(v.size() == 3).toBeTruthy();
-
-            v.pop_back();
-            expect(v.size() == 2).toBeTruthy();
-            expect(v.back() == 2).toBeTruthy();
-
-            v.clear();
-            expect(v.empty()).toBeTruthy();
-        });
-
-        it("supports iteration", {
-            FlatVec3 v;
-            v.push_back(1);
-            v.push_back(2);
-            v.push_back(3);
-
-            int sum = 0;
-            for (auto x : v) { sum += x; }
-            expect(sum == 6).toBeTruthy();
-        });
-
-        it("supports resize", {
-            FlatVec2 v;
-            v.push_back(10);
-            v.push_back(20);
-            v.push_back(30);
-
-            v.resize(2);
-            expect(v.size() == 2).toBeTruthy();
-            expect(v[0] == 10).toBeTruthy();
-            expect(v[1] == 20).toBeTruthy();
-        });
-    });
-
-    describe("Core - intrusive_list", {
-        it("supports push erase clear and iteration", {
-            TestList list;
-            TestNode a{10};
-            TestNode b{20};
-            TestNode c{30};
-            list.push_back(&a);
-            list.push_back(&b);
-            list.push_back(&c);
-            int sum = 0;
-            for (auto& node : list) { sum += node.value; }
-            expect(sum == 60).toBeTruthy();
-
-            list.erase(list.begin());
-            expect(list.size() == 2).toBeTruthy();
-
-            list.clear();
-            expect(list.empty()).toBeTruthy();
-        });
-    });
-
-    describe("Core - Result", {
-        it("holds a value on success", {
-            Result<int> r{42};
-            expect(r.has_value()).toBeTruthy();
-            expect(r.value()).toEqual(42);
-        });
-
-        it("holds an error on failure", {
-            Result<int> r{Error{ErrorCode::BlockNotFound}};
-            expect(r.has_value()).toBeFalsy();
-            expect(r.error().code() == ErrorCode::BlockNotFound).toBeTruthy();
-        });
-
-        it("void result succeeds by default", {
-            Result<void> r;
-            expect(r.has_value()).toBeTruthy();
-        });
-
-        it("void result holds error", {
-            Result<void> r{Error{ErrorCode::AllocationFailed}};
-            expect(r.has_value()).toBeFalsy();
-            expect(r.error().code() == ErrorCode::AllocationFailed).toBeTruthy();
-        });
-    });
-
-    describe("Runtime", {
-        it("creates and destroys a block", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            auto reg = rt.register_block_type(desc);
-            expect(reg.has_value()).toBeTruthy();
-
-            auto block = rt.create_block(1);
-            expect(block.has_value()).toBeTruthy();
-            expect(rt.has_block(block.value())).toBeTruthy();
-
-            auto destroy = rt.destroy_block(block.value());
-            expect(destroy.has_value()).toBeTruthy();
-            expect(rt.has_block(block.value())).toBeFalsy();
-        });
-
-        it("fails to create block with unregistered type", {
-            DefaultRuntime rt;
-            auto block = rt.create_block(99);
-            expect(block.has_value()).toBeFalsy();
-            expect(block.error().code() == ErrorCode::TypeNotRegistered).toBeTruthy();
-        });
-
-        it("rejects duplicate type registration", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            auto r1 = rt.register_block_type(desc);
-            expect(r1.has_value()).toBeTruthy();
-            auto r2 = rt.register_block_type(desc);
-            expect(r2.has_value()).toBeFalsy();
-            expect(r2.error().code() == ErrorCode::DuplicateRegistration).toBeTruthy();
-        });
-    });
-
-    describe("Commands", {
-        it("creates a block via command", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            auto r1 = rt.register_block_type(desc);
-            expect(r1.has_value()).toBeTruthy();
-
-            auto submit = rt.submit_command(Command{CommandCreateBlock{1}});
-            expect(submit.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-            expect(rt.block_count(1) == 1).toBeTruthy();
-        });
-
-        it("destroys a block via command", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            auto r1 = rt.register_block_type(desc);
-            expect(r1.has_value()).toBeTruthy();
-
-            auto block = rt.create_block(1);
-            expect(block.has_value()).toBeTruthy();
-
-            auto submit = rt.submit_command(Command{CommandDestroyBlock{{block.value()}}});
-            expect(submit.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-            expect(rt.block_count(1) == 0).toBeTruthy();
-        });
-
-        it("writes field data via command", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            auto r1 = rt.register_block_type(desc);
-            expect(r1.has_value()).toBeTruthy();
-
-            auto block = rt.create_block(1);
-            expect(block.has_value()).toBeTruthy();
-
-            int value = 42;
-            auto bytes = std::vector<std::byte>(
-                reinterpret_cast<std::byte*>(&value),
-                reinterpret_cast<std::byte*>(&value) + sizeof(int));
-
-            auto submit = rt.submit_command(Command{CommandSetField{{block.value()}, 0, bytes}});
-            expect(submit.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-
-            auto& blocks = rt.blocks();
-            auto it = blocks.find(block.value());
-            expect(it != blocks.end()).toBeTruthy();
-
-            int stored;
-            std::memcpy(&stored, it->second.data(), sizeof(int));
-            expect(stored).toEqual(42);
-        });
-
-        it("destroys multiple blocks with one command", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-
-            auto b1 = rt.create_block(1);
-            auto b2 = rt.create_block(1);
-            auto b3 = rt.create_block(1);
-            expect(b1.has_value() && b2.has_value() && b3.has_value()).toBeTruthy();
-
-            auto submit = rt.submit_command(
-                Command{CommandDestroyBlock{{b1.value(), b3.value()}}});
-            expect(submit.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-            expect(rt.block_count(1) == 1).toBeTruthy();
-            expect(rt.has_block(b2.value())).toBeTruthy();
-        });
-
-        it("resizes a block and writes beyond original size", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-
-            auto block = rt.create_block(1);
-            expect(block.has_value()).toBeTruthy();
-
-            auto resize = rt.submit_command(
-                Command{CommandResizeBlock{{block.value()}, sizeof(int) * 2}});
-            expect(resize.has_value()).toBeTruthy();
-            rt.tick();
-            expect(rt.blocks().at(block.value()).size() == sizeof(int) * 2).toBeTruthy();
-
-            int value = 99;
-            auto bytes = std::vector<std::byte>(
-                reinterpret_cast<std::byte*>(&value),
-                reinterpret_cast<std::byte*>(&value) + sizeof(int));
-
-            auto set = rt.submit_command(
-                Command{CommandSetField{{block.value()}, sizeof(int), bytes}});
-            expect(set.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-
-            int stored;
-            std::memcpy(&stored,
-                        static_cast<const std::byte*>(rt.blocks().at(block.value()).data()) + sizeof(int),
-                        sizeof(int));
-            expect(stored).toEqual(99);
-        });
-
-        it("rejects command for unregistered type", {
-            DefaultRuntime rt;
-            auto submit = rt.submit_command(Command{CommandCreateBlock{1}});
-            expect(submit.has_value()).toBeTruthy();
-            auto result = rt.tick();
-            expect(result.commands_rejected == 1).toBeTruthy();
-            expect(result.commands_executed == 0).toBeTruthy();
-            expect(result.rejected_commands.size() == 1).toBeTruthy();
-            expect(result.rejected_commands[0].error.code() == ErrorCode::TypeNotRegistered).toBeTruthy();
-        });
-
-        it("cancels a pending command", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-
-            auto id = rt.submit_command(Command{CommandCreateBlock{1}});
-            expect(id.has_value()).toBeTruthy();
-            rt.cancel_command(id.value());
-
-            auto result = rt.tick();
-            expect(result.commands_executed == 0).toBeTruthy();
-            expect(result.commands_rejected == 0).toBeTruthy();
-            expect(rt.block_count(1) == 0).toBeTruthy();
-        });
-
-        it("cancels one command, executes another", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-
-            auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
-            auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
-            expect(id2.has_value()).toBeTruthy();
-            rt.cancel_command(id1.value());
-
-            auto result = rt.tick();
-            expect(result.commands_executed == 1).toBeTruthy();
-            expect(rt.block_count(1) == 1).toBeTruthy();
-        });
-    });
-
-    describe("Controllers", {
-        it("creates a block via controller", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "counter";
-            auto r1 = rt.register_block_type(desc);
-            expect(r1.has_value()).toBeTruthy();
-
-            auto controller = [](StateView&, CommandProducer& producer) -> Result<void> {
-                auto result = producer.produce(Command{CommandCreateBlock{1}});
-                if (!result) return result.error();
-                return {};
-            };
-
-            auto reg = rt.register_controller(std::move(controller));
-            expect(reg.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-            expect(result.controllers_executed == 1).toBeTruthy();
-            expect(rt.block_count(1) == 1).toBeTruthy();
-        });
-
-        it("produces multiple commands in one tick", {
-            DefaultRuntime rt;
-            BlockTypeDescriptor desc;
-            desc.type_id = 1;
-            desc.size = sizeof(int);
-            desc.alignment = alignof(int);
-            desc.name = "test";
-            auto r1 = rt.register_block_type(desc);
-            expect(r1.has_value()).toBeTruthy();
-
-            auto controller = [](StateView&, CommandProducer& producer) -> Result<void> {
-                auto r1 = producer.produce(Command{CommandCreateBlock{1}});
-                if (!r1) return r1.error();
-                auto r2 = producer.produce(Command{CommandCreateBlock{1}});
-                if (!r2) return r2.error();
-                return {};
-            };
-
-            auto reg = rt.register_controller(std::move(controller));
-            expect(reg.has_value()).toBeTruthy();
-
-            auto result = rt.tick();
-            expect(result.status == ExecutionStatus::Success).toBeTruthy();
-            expect(result.commands_executed == 2).toBeTruthy();
-            expect(rt.block_count(1) == 2).toBeTruthy();
-        });
-    });
-
-    describe("Error Handling", {
-        it("fails to destroy invalid identity", {
-            DefaultRuntime rt;
-            auto destroy = rt.destroy_block(Identity::invalid());
-            expect(destroy.has_value()).toBeFalsy();
-            expect(destroy.error().code() == ErrorCode::InvalidIdentity).toBeTruthy();
-        });
-
-        it("fails to destroy nonexistent block", {
-            DefaultRuntime rt;
-            auto destroy = rt.destroy_block(Identity{999});
-            expect(destroy.has_value()).toBeFalsy();
-            expect(destroy.error().code() == ErrorCode::BlockNotFound).toBeTruthy();
-        });
-    });
-
-    describe("Core - avl_tree", {
-        it("inserts finds and iterates", {
-            AVLTreeIntStr tree;
-            expect(tree.empty()).toBeTruthy();
-            tree.insert(3, "three");
-            tree.insert(1, "one");
-            tree.insert(4, "four");
-            tree.insert(2, "two");
-            expect(tree.size() == 4).toBeTruthy();
-            expect(tree.contains(3)).toBeTruthy();
-            expect(tree.contains(5)).toBeFalsy();
-            auto iter = tree.find(2);
-            expect(iter != tree.end()).toBeTruthy();
-            expect(iter->second == "two").toBeTruthy();
-            int prev = 0;
-            int count = 0;
-            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
-                expect(it2->first > prev).toBeTruthy();
-                prev = it2->first;
-                ++count;
-            }
-            expect(count == 4).toBeTruthy();
-        });
-        it("handles LL rotation", {
-            int k[3]; k[0] = 3; k[1] = 2; k[2] = 1;
-            avl_rotation_test(k, 3);
-        });
-        it("handles RR rotation", {
-            int k[3]; k[0] = 1; k[1] = 2; k[2] = 3;
-            avl_rotation_test(k, 3);
-        });
-        it("handles LR rotation", {
-            int k[3]; k[0] = 3; k[1] = 1; k[2] = 2;
-            avl_rotation_test(k, 3);
-        });
-        it("handles RL rotation", {
-            int k[3]; k[0] = 1; k[1] = 3; k[2] = 2;
-            avl_rotation_test(k, 3);
-        });
-        it("handles stress 10000 inserts", {
-            AVLTreeIntStr tree;
-            for (int i = 0; i < 10000; ++i) tree.insert(i, "v");
-            expect(tree.size() == 10000).toBeTruthy();
-            int prev = -1;
-            int count = 0;
-            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
-                expect(it2->first == prev + 1).toBeTruthy();
-                prev = it2->first;
-                ++count;
-            }
-            expect(count == 10000).toBeTruthy();
-        });
-        it("handles stress 10000 random inserts", {
-            AVLTreeIntStr tree;
-            for (int i = 0; i < 10000; ++i) tree.insert((i * 7 + 13) % 10000, "v");
-            expect(tree.size() == 10000).toBeTruthy();
-            int prev = -1;
-            int count = 0;
-            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
-                expect(it2->first > prev).toBeTruthy();
-                prev = it2->first;
-                ++count;
-            }
-            expect(count == 10000).toBeTruthy();
-        });
-        it("supports move semantics", {
-            AVLTreeIntStr a;
-            a.insert(1, "a");
-            AVLTreeIntStr b(std::move(a));
-            expect(b.size() == 1).toBeTruthy();
-            expect(b.contains(1)).toBeTruthy();
-        });
-        it("updates existing key", {
-            AVLTreeIntStr tree;
-            tree.insert(1, "old");
-            tree.insert(1, "new");
-            expect(tree.size() == 1).toBeTruthy();
-            expect(tree.find(1)->second == "new").toBeTruthy();
-        });
-        it("erases leaf node", {
-            AVLTreeIntStr tree;
-            tree.insert(1, "a");
-            tree.insert(2, "b");
-            tree.insert(3, "c");
-            tree.erase(1);
-            expect(tree.size() == 2).toBeTruthy();
-            expect(tree.contains(1)).toBeFalsy();
-            int prev = 0;
-            int cnt = 0;
-            for (auto it = tree.begin(); it != tree.end(); ++it) {
-                expect(it->first > prev).toBeTruthy();
-                prev = it->first;
-                ++cnt;
-            }
-            expect(cnt == 2).toBeTruthy();
-        });
-        it("erases node with one child", {
-            AVLTreeIntStr tree;
-            tree.insert(1, "a");
-            tree.insert(2, "b");
-            tree.insert(3, "c");
-            tree.erase(2);
-            expect(tree.size() == 2).toBeTruthy();
-            expect(tree.contains(2)).toBeFalsy();
-        });
-        it("erases node with two children", {
-            AVLTreeIntStr tree;
-            tree.insert(2, "a");
-            tree.insert(1, "b");
-            tree.insert(3, "c");
-            tree.erase(2);
-            expect(tree.size() == 2).toBeTruthy();
-            expect(tree.contains(2)).toBeFalsy();
-        });
-        it("erases root", {
-            AVLTreeIntStr tree;
-            tree.insert(5, "a");
-            tree.insert(3, "b");
-            tree.insert(7, "c");
-            tree.insert(2, "d");
-            tree.insert(4, "e");
-            tree.erase(5);
-            expect(tree.size() == 4).toBeTruthy();
-            int prev = 0;
-            int cnt = 0;
-            for (auto it = tree.begin(); it != tree.end(); ++it) {
-                expect(it->first > prev).toBeTruthy();
-                prev = it->first;
-                ++cnt;
-            }
-            expect(cnt == 4).toBeTruthy();
-        });
-        it("erases nonexistent key", {
-            AVLTreeIntStr tree;
-            tree.insert(1, "a");
-            tree.erase(99);
-            expect(tree.size() == 1).toBeTruthy();
-        });
-    });
-
-    describe("Core - rb_tree", {
-        it("inserts finds and iterates", {
-            RBTreeIntStr tree;
-            expect(tree.empty()).toBeTruthy();
-            tree.insert(3, "three");
-            tree.insert(1, "one");
-            tree.insert(4, "four");
-            tree.insert(2, "two");
-            expect(tree.size() == 4).toBeTruthy();
-            expect(tree.contains(3)).toBeTruthy();
-            expect(tree.contains(5)).toBeFalsy();
-            auto iter = tree.find(2);
-            expect(iter != tree.end()).toBeTruthy();
-            expect(iter->second == "two").toBeTruthy();
-            int prev = 0;
-            int count = 0;
-            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
-                expect(it2->first > prev).toBeTruthy();
-                prev = it2->first;
-                ++count;
-            }
-            expect(count == 4).toBeTruthy();
-        });
-        it("handles LL rotation", {
-            int k[3]; k[0] = 3; k[1] = 2; k[2] = 1;
-            rb_rotation_test(k, 3);
-        });
-        it("handles RR rotation", {
-            int k[3]; k[0] = 1; k[1] = 2; k[2] = 3;
-            rb_rotation_test(k, 3);
-        });
-        it("handles LR rotation", {
-            int k[3]; k[0] = 3; k[1] = 1; k[2] = 2;
-            rb_rotation_test(k, 3);
-        });
-        it("handles RL rotation", {
-            int k[3]; k[0] = 1; k[1] = 3; k[2] = 2;
-            rb_rotation_test(k, 3);
-        });
-        it("handles stress 10000 inserts", {
-            RBTreeIntStr tree;
-            for (int i = 0; i < 10000; ++i) tree.insert(i, "v");
-            expect(tree.size() == 10000).toBeTruthy();
-            int prev = -1;
-            int count = 0;
-            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
-                expect(it2->first == prev + 1).toBeTruthy();
-                prev = it2->first;
-                ++count;
-            }
-            expect(count == 10000).toBeTruthy();
-        });
-        it("handles stress 10000 random inserts", {
-            RBTreeIntStr tree;
-            for (int i = 0; i < 10000; ++i) tree.insert((i * 7 + 13) % 10000, "v");
-            expect(tree.size() == 10000).toBeTruthy();
-            int prev = -1;
-            int count = 0;
-            for (auto it2 = tree.begin(); it2 != tree.end(); ++it2) {
-                expect(it2->first > prev).toBeTruthy();
-                prev = it2->first;
-                ++count;
-            }
-            expect(count == 10000).toBeTruthy();
-        });
-        it("supports move semantics", {
-            RBTreeIntStr a;
-            a.insert(1, "a");
-            RBTreeIntStr b(std::move(a));
-            expect(b.size() == 1).toBeTruthy();
-            expect(b.contains(1)).toBeTruthy();
-        });
-        it("updates existing key", {
-            RBTreeIntStr tree;
-            tree.insert(1, "old");
-            tree.insert(1, "new");
-            expect(tree.size() == 1).toBeTruthy();
-            expect(tree.find(1)->second == "new").toBeTruthy();
-        });
-        it("erases leaf node", {
-            RBTreeIntStr tree;
-            tree.insert(1, "a");
-            tree.insert(2, "b");
-            tree.insert(3, "c");
-            tree.erase(1);
-            expect(tree.size() == 2).toBeTruthy();
-            expect(tree.contains(1)).toBeFalsy();
-            int prev = 0;
-            int cnt = 0;
-            for (auto it = tree.begin(); it != tree.end(); ++it) {
-                expect(it->first > prev).toBeTruthy();
-                prev = it->first;
-                ++cnt;
-            }
-            expect(cnt == 2).toBeTruthy();
-        });
-        it("erases node with one child", {
-            RBTreeIntStr tree;
-            tree.insert(1, "a");
-            tree.insert(2, "b");
-            tree.insert(3, "c");
-            tree.erase(2);
-            expect(tree.size() == 2).toBeTruthy();
-            expect(tree.contains(2)).toBeFalsy();
-        });
-        it("erases node with two children", {
-            RBTreeIntStr tree;
-            tree.insert(2, "a");
-            tree.insert(1, "b");
-            tree.insert(3, "c");
-            tree.erase(2);
-            expect(tree.size() == 2).toBeTruthy();
-            expect(tree.contains(2)).toBeFalsy();
-        });
-        it("erases root", {
-            RBTreeIntStr tree;
-            tree.insert(5, "a");
-            tree.insert(3, "b");
-            tree.insert(7, "c");
-            tree.insert(2, "d");
-            tree.insert(4, "e");
-            tree.erase(5);
-            expect(tree.size() == 4).toBeTruthy();
-            int prev = 0;
-            int cnt = 0;
-            for (auto it = tree.begin(); it != tree.end(); ++it) {
-                expect(it->first > prev).toBeTruthy();
-                prev = it->first;
-                ++cnt;
-            }
-            expect(cnt == 4).toBeTruthy();
-        });
-        it("erases nonexistent key", {
-            RBTreeIntStr tree;
-            tree.insert(1, "a");
-            tree.erase(99);
-            expect(tree.size() == 1).toBeTruthy();
-        });
-    });
-
+    run_identity_tests();
+    run_flat_vector_tests();
+    run_intrusive_list_tests();
+    run_error_tests();
+    run_command_tests();
+    run_controller_tests();
+    run_runtime_tests();
+    run_platform_tests();
+    run_error_handling_tests();
+    run_event_tests();
+    run_serialization_tests();
+    run_relationship_tests();
+    run_avl_tree_tests();
+    run_rb_tree_tests();
     return cest_result();
 }

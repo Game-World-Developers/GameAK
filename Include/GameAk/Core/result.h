@@ -26,8 +26,33 @@ public:
 
     Result(const Result&) = delete;
     Result& operator=(const Result&) = delete;
-    Result(Result&&) = delete;
-    Result& operator=(Result&&) = delete;
+
+    Result(Result&& other) noexcept(std::is_nothrow_move_constructible_v<T>)
+        : has_value_(other.has_value_)
+    {
+        if (has_value_) {
+            new (&value_) T(std::move(other.value_));
+        } else {
+            new (&error_) Error(std::move(other.error_));
+        }
+    }
+
+    Result& operator=(Result&& other) noexcept(std::is_nothrow_move_constructible_v<T>) {
+        if (this != &other) {
+            if (has_value_) {
+                value_.~T();
+            } else {
+                error_.~Error();
+            }
+            has_value_ = other.has_value_;
+            if (has_value_) {
+                new (&value_) T(std::move(other.value_));
+            } else {
+                new (&error_) Error(std::move(other.error_));
+            }
+        }
+        return *this;
+    }
 
     bool has_value() const { return has_value_; }
     explicit operator bool() const { return has_value_; }

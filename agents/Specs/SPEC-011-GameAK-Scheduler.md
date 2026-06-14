@@ -1,6 +1,6 @@
 # SPEC-011: Scheduler
 
-Status: READY
+Status: IMPLEMENTED
 
 Last validated by Ralph: never
 

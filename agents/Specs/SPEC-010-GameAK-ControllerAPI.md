@@ -1,8 +1,8 @@
 # SPEC-010: Controller API
 
-Status: READY
+Status: IMPLEMENTED
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -51,6 +51,22 @@ The Runtime owns Controller execution during tick.
 Controllers may be executed multiple times.
 
 Controller execution order is determined by the Runtime.
+
+### Priorities
+
+Each Controller may be registered with an integer priority.
+
+Priorities are signed integers. Higher values execute before lower values.
+
+The default priority (when not specified) is 0.
+
+Controllers with equal priority preserve their registration order (stable sort).
+
+```cpp
+Result<void> register_controller(Controller controller, int priority);
+```
+
+**Tests:** `test_controller.h` — `controllers execute in priority order`, `controllers with equal priority preserve registration order`, `single-arg register_controller uses default priority 0`
 
 ### No Internal Mutable State
 

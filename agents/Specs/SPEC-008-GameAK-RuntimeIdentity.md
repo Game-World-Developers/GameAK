@@ -1,6 +1,6 @@
 # SPEC-008: Runtime Identity
 
-Status: READY
+Status: IMPLEMENTED
 
 Last validated by Ralph: never
 

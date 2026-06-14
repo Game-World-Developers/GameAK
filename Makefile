@@ -17,7 +17,8 @@ SRC_CORE    := Src/GameAk/Core/identity.cpp
 SRC_RUNTIME := Src/GameAk/Runtime/command.cpp \
                Src/GameAk/Runtime/controller.cpp \
                Src/GameAk/Runtime/runtime.cpp \
-               Src/GameAk/Runtime/scheduler.cpp
+               Src/GameAk/Runtime/scheduler.cpp \
+               Src/GameAk/Runtime/priority_scheduler.cpp
 SRCS        := $(SRC_CORE) $(SRC_RUNTIME)
 OBJS        := $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 
@@ -48,7 +49,7 @@ $(TEST_BIN): $(TEST_OBJ) $(LIB)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(TEST_OBJ) -L$(LIB_DIR) -lgameak $(SPDLOG_LIBS)
 
 test: $(TEST_BIN)
-	./$(TEST_BIN)
+	./$(TEST_BIN) --quiet
 
 clean:
 	rm -rf $(BUILD_DIR) $(TEST_BIN)

@@ -1,21 +1,17 @@
-#include "GameAk/Runtime/fifo_scheduler.h"
+#include "GameAk/Runtime/priority_scheduler.h"
 #include "GameAk/Runtime/scheduler_ops.h"
-#include <utility>
+#include <algorithm>
 
 namespace gameak::runtime {
 
-void FifoScheduler::enqueue_impl(Command command) {
-    queue_.push(std::move(command));
-}
-
-core::Result<void> FifoScheduler::validate(
+core::Result<void> PriorityScheduler::validate(
     const Command& command,
     const std::unordered_map<core::Identity, DataBlock>& blocks,
     const std::unordered_map<uint32_t, BlockTypeDescriptor>& types) {
     return detail::validate_command(command, blocks, types);
 }
 
-core::Result<void> FifoScheduler::execute(
+core::Result<void> PriorityScheduler::execute(
     Command& command,
     std::unordered_map<core::Identity, DataBlock>& blocks,
     const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
@@ -23,15 +19,20 @@ core::Result<void> FifoScheduler::execute(
     return detail::execute_command(command, blocks, types, next_identity);
 }
 
-core::Result<void> FifoScheduler::process_pending_impl(
+core::Result<void> PriorityScheduler::process_pending_impl(
     std::unordered_map<core::Identity, DataBlock>& blocks,
     std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity) {
 
-    while (!queue_.empty()) {
-        auto command = std::move(queue_.front());
-        queue_.pop();
+    // Sort by priority (higher = first)
+    std::sort(pending_.begin(), pending_.end(),
+        [this](const Command& a, const Command& b) {
+            int pa = priority_fn_ ? priority_fn_(a) : 0;
+            int pb = priority_fn_ ? priority_fn_(b) : 0;
+            return pa > pb;
+        });
 
+    for (auto& command : pending_) {
         if (cancelled_.contains(command.id())) {
             cancelled_.erase(command.id());
             skipped_++;
@@ -54,6 +55,8 @@ core::Result<void> FifoScheduler::process_pending_impl(
             executed_++;
         }
     }
+
+    pending_.clear();
     return {};
 }
 

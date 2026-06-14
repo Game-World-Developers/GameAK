@@ -92,7 +92,7 @@ public:
     void pop_back() { if (!empty()) { unlink(static_cast<T*>(head_.prev)); } }
 
     iterator insert(const_iterator pos, T* node) {
-        auto* p = const_cast<intrusive_node*>(&*pos);
+        auto* p = static_cast<intrusive_node*>(const_cast<T*>(&*pos));
         link_after(p->prev, node);
         return iterator(node);
     }

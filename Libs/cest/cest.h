@@ -525,6 +525,7 @@ CEST_WEAK const char* _cest_junit_output = NULL;
 CEST_WEAK const char* _cest_json_output = NULL;
 CEST_WEAK double _cest_total_time = 0.0;
 CEST_WEAK clock_t _cest_suite_start_time = 0;
+CEST_WEAK bool _cest_quiet = false;
 
 // Test state for skip/only
 typedef enum {
@@ -659,7 +660,8 @@ static inline void _cest_assert_impl(cest_value_t expected, cest_match_fn match,
     int diff_pos = -1;
     int passed = match(_cest_ctx.actual, expected, &diff_pos);
     if (passed) {
-        printf("    " CEST_CLR_GREEN "✓" CEST_CLR_RESET " %s %s %s\n", _cest_ctx.actual_expr, match_name, expected_expr);
+        if (!_cest_quiet)
+            printf("    " CEST_CLR_GREEN "✓" CEST_CLR_RESET " %s %s %s\n", _cest_ctx.actual_expr, match_name, expected_expr);
         _cest_global_stats.passed++;
     } else {
         printf("  " CEST_CLR_RED "✕ %s failed" CEST_CLR_RESET "\n", _cest_ctx.actual_expr);
@@ -1193,6 +1195,8 @@ static inline void _cest_parse_cli_args(int argc, char* argv[]) {
                 _cest_junit_output = argv[++i];
             } else if (strcmp(argv[i], "--json") == 0 && i + 1 < argc) {
                 _cest_json_output = argv[++i];
+            } else if (strcmp(argv[i], "--quiet") == 0) {
+                _cest_quiet = true;
             } else {
                 if (_cest_cli_count < (int)(sizeof(_cest_cli_args) / sizeof(_cest_cli_args[0]))) {
                     _cest_cli_args[_cest_cli_count++] = argv[i];

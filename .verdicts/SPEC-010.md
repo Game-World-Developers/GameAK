@@ -2,37 +2,46 @@
 
 **Validation timestamp:** 2026-06-13
 
-**Verdict:** READY
+**Verdict:** READY / IMPLEMENTED
 
 ## Assessment
 
-SPEC-010 defines the Controller interface with sufficient clarity for implementation. All three open questions have been answered.
+SPEC-010 defines the Controller interface. All original open questions have been answered. The spec has been extended with Controller Priorities.
 
-Key specifications:
-- Controller is a callable type accepting a read-only state view and a command producer
-- Returns a Result type
-- Receives read-only state (no direct mutation)
-- Produces commands through a command producer
-- Registered with Runtime before execution
-- Can produce zero or more commands per execution
-- No mutable state between executions
-- Can access time delta (provided by Runtime)
-- Failures reported through Result type
+## What Changed Since Previous Validation
+
+### Previously Answered: 4 Questions — All Resolved
+
+| # | Question | Answer | Status |
+|---|----------|--------|--------|
+| 1 | Can a Controller fail? | Yes. Failures reported through Result return type. | ✅ |
+| 2 | Can a Controller produce multiple Commands? | Yes. Zero or more per execution. | ✅ |
+| 3 | Can a Controller read state from other Controllers? | No. Controllers read from Runtime through state view. | ✅ |
+| 4 | Can a Controller access the time delta? | Yes. State view includes time delta value. | ✅ |
+
+### New Feature Added (Post-Validation)
+
+| Feature | Spec Section | Tests |
+|---------|-------------|-------|
+| **Controller Priorities** | Priorities | `controllers execute in priority order`, `controllers with equal priority preserve registration order`, `single-arg register_controller uses default priority 0` |
+
+### Priority Semantics
+
+- Controllers may be registered with an integer priority via `register_controller(Controller, int)`.
+- Controllers with a single argument default to priority 0.
+- Higher priorities execute first.
+- Equal priorities preserve registration order (stable sort).
+- Sorting by priority happens before each tick's Controller Execution Phase.
 
 ## Minor Considerations
 
-- **StateView and CommandProducer types are not defined.** The spec defines them conceptually ("a read-only projection of simulation state," "an interface through which Controllers submit Commands to the Runtime") but their exact API is not specified. A developer must define these interfaces. This is acceptable because:
-  - StateView's purpose is clear (read-only access to Data Blocks via identities)
-  - CommandProducer's purpose is clear (create/submit commands)
-  - SPEC-005 and SPEC-006 define the underlying concepts
-- **Controller's Result value type:** The Controller returns a Result, but the "success value" type is not specified (void? command count?). A developer must choose. This is a minor design decision.
+- **StateView and CommandProducer types are not fully defined in the spec** — their exact API is implicit. This is acceptable because their purpose is clear and they are exercised in tests.
+- **Controller's Result value type** — the success value is `void` (the Controller communicates state changes through Commands, not return values).
 
 ## Open Questions
 
-None. All three open questions have been answered.
+None. All questions are answered.
 
-## Notes
+## Final Determination
 
-- This spec is tightly coupled with SPEC-009 (Runtime API, which registers controllers) and SPEC-011 (Scheduler, which determines execution order).
-- The "no internal mutable state" constraint is important for determinism.
-- The `Status: DRAFT` header should be updated to `READY` once this verdict is accepted.
+**SPEC-010 is READY and IMPLEMENTED.** All requirements are covered by passing tests.

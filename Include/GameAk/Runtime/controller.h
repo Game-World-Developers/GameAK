@@ -14,8 +14,9 @@ class DataBlock;
 struct BlockTypeDescriptor;
 class StateView;
 class CommandProducer;
+class EphemeralProducer;
 
-using Controller = std::function<core::Result<void>(StateView&, CommandProducer&)>;
+using Controller = std::function<core::Result<void>(StateView&, CommandProducer&, EphemeralProducer&)>;
 
 /// Wraps a Controller with its execution priority.
 /// Higher priority values execute before lower ones.
@@ -55,6 +56,21 @@ public:
 
 private:
     SubmitFn submit_fn_;
+};
+
+class EphemeralProducer {
+public:
+    using CreateFn = std::function<core::Result<core::Identity>(uint32_t type_id)>;
+
+    explicit EphemeralProducer(CreateFn create_fn)
+        : create_fn_(std::move(create_fn)) {}
+
+    core::Result<core::Identity> create(uint32_t type_id) {
+        return create_fn_(type_id);
+    }
+
+private:
+    CreateFn create_fn_;
 };
 
 } // namespace gameak::runtime

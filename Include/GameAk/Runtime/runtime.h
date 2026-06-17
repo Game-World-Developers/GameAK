@@ -4,6 +4,7 @@
 #include "command.h"
 #include "controller.h"
 #include "fifo_scheduler.h"
+#include "layout_strategy.h"
 #include "GameAk/Core/identity.h"
 #include "GameAk/Core/result.h"
 #include "GameAk/Core/flat_vector.h"
@@ -144,6 +145,57 @@ public:
     /// Get all parents of a given block.
     std::vector<core::Identity> parents_of(core::Identity child) const;
 
+    // ── Layout API ─────────────────────────────────────────────────
+    /// Convert all blocks of a type to SoA storage.
+    void convert_to_soa(uint32_t type_id);
+    /// Convert all blocks of a type back to AoS storage.
+    void convert_from_soa(uint32_t type_id);
+
+    LayoutStrategy get_layout(uint32_t type_id) const {
+        auto it = types_.find(type_id);
+        if (it == types_.end()) return LayoutStrategy::AoS;
+        return it->second.layout;
+    }
+
+    bool has_layout_storage(uint32_t type_id) const {
+        return layout_storage_.contains(type_id);
+    }
+
+    /// Get number of blocks stored in SoA mode for a type.
+    size_t soa_block_count(uint32_t type_id) const {
+        auto it = layout_storage_.find(type_id);
+        if (it == layout_storage_.end()) return 0;
+        return it->second.identities.size();
+    }
+
+    /// Get the raw SoA field data array for inspection/testing.
+    const std::vector<std::byte>* soa_field_data(uint32_t type_id, size_t field_index) const {
+        auto it = layout_storage_.find(type_id);
+        if (it == layout_storage_.end()) return nullptr;
+        if (field_index >= it->second.fields.size()) return nullptr;
+        return &it->second.fields[field_index].data;
+    }
+
+    /// Get the number of SoA fields for a type.
+    size_t soa_field_count(uint32_t type_id) const {
+        auto it = layout_storage_.find(type_id);
+        if (it == layout_storage_.end()) return 0;
+        return it->second.fields.size();
+    }
+
+    // ── Ephemeral API ──────────────────────────────────────────────
+    /// Create an ephemeral block directly. Only valid for types with ephemeral=true.
+    core::Result<core::Identity> create_ephemeral_block(uint32_t type_id);
+
+    /// Destroy all ephemeral data blocks. Called automatically at TickEnd.
+    void destroy_all_ephemeral();
+
+    bool is_ephemeral_type(uint32_t type_id) const {
+        auto it = types_.find(type_id);
+        if (it == types_.end()) return false;
+        return it->second.ephemeral;
+    }
+
     // ── Diagnostics API ────────────────────────────────────────────
     struct Diagnostics {
         size_t pending_commands{0};
@@ -168,6 +220,18 @@ public:
     }
 
 private:
+    struct SoAFieldArray {
+        std::vector<std::byte> data; // flat array of N * field_size
+        size_t field_size{0};
+        size_t field_offset{0};
+        size_t field_alignment{1};
+    };
+
+    struct SoAStorage {
+        std::vector<core::Identity> identities;
+        std::vector<SoAFieldArray> fields;
+    };
+
     TickResult execute_single_tick(float time_delta);
 
     void fire_event(EventType type,
@@ -176,6 +240,9 @@ private:
 
     void apply_log_level(LogLevel level);
     void rebuild_type_counts();
+
+    // Layout management
+    void ensure_soa_storage(uint32_t type_id);
 
     RuntimeConfig config_;
     SchedulerType scheduler_;
@@ -198,6 +265,9 @@ private:
     // Block relationships (bidirectional adjacency)
     std::unordered_multimap<core::Identity, core::Identity> parent_to_children_;
     std::unordered_multimap<core::Identity, core::Identity> child_to_parents_;
+
+    // Per-type layout storage (for SoA/AoSoA)
+    std::unordered_map<uint32_t, SoAStorage> layout_storage_;
 };
 
 // -------------------------------------------------------------------
@@ -406,7 +476,12 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
                 return this->submit_command(std::move(cmd));
             }
         };
-        auto cr = entry.controller(state_view, producer);
+        EphemeralProducer ephem_producer{
+            [this](uint32_t type_id) -> core::Result<core::Identity> {
+                return this->create_ephemeral_block(type_id);
+            }
+        };
+        auto cr = entry.controller(state_view, producer, ephem_producer);
         if (!cr) {
             SPDLOG_WARN("Controller failed: {}", cr.error().message());
             result.status = ExecutionStatus::PartialFailure;
@@ -416,7 +491,8 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
     result.controllers_executed = controller_count;
 
     // Command Processing Phase
-    // Snapshot blocks before command processing if block events are being listened for
+    // Snapshot blocks after controller execution (so ephemeral blocks are in both
+    // before and after snapshots, preventing spurious BlockCreated events).
     bool track_blocks = this->event_handlers_.contains(EventType::BlockCreated) ||
                         this->event_handlers_.contains(EventType::BlockDestroyed);
     decltype(this->blocks_) before_blocks;
@@ -456,6 +532,9 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
 
     this->rebuild_type_counts();
 
+    // Destroy ephemeral blocks before TickEnd event
+    this->destroy_all_ephemeral();
+
     fire_event(EventType::TickEnd);
 
     return result;
@@ -490,8 +569,17 @@ std::vector<core::Identity> Runtime<S>::find_blocks(
 
 template <typename S>
 typename Runtime<S>::Snapshot Runtime<S>::save() const {
+    // Filter out ephemeral blocks from snapshot
+    decltype(this->blocks_) persistent_blocks;
+    for (const auto& [id, block] : this->blocks_) {
+        auto tit = this->types_.find(block.type_id());
+        if (tit != this->types_.end() && tit->second.ephemeral) {
+            continue;
+        }
+        persistent_blocks.emplace(id, block);
+    }
     return Snapshot{
-        .blocks        = this->blocks_,
+        .blocks        = std::move(persistent_blocks),
         .types         = this->types_,
         .next_identity = this->next_identity_,
     };
@@ -575,6 +663,151 @@ void Runtime<S>::rebuild_type_counts() {
         (void)id;
         this->type_counts_[block.type_id()]++;
     }
+}
+
+// ── Ephemeral Methods ─────────────────────────────────────────────
+
+template <typename S>
+core::Result<core::Identity> Runtime<S>::create_ephemeral_block(uint32_t type_id) {
+    auto it = this->types_.find(type_id);
+    if (it == this->types_.end()) {
+        return core::Error{core::ErrorCode::TypeNotRegistered, "Block type not registered"};
+    }
+    if (!it->second.ephemeral) {
+        return core::Error{core::ErrorCode::InvalidOperation, "Cannot create ephemeral block for non-ephemeral type"};
+    }
+    auto& desc = it->second;
+    core::Identity id{++this->next_identity_};
+    this->blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    this->type_counts_[type_id]++;
+    return id;
+}
+
+template <typename S>
+void Runtime<S>::destroy_all_ephemeral() {
+    std::vector<core::Identity> to_destroy;
+    for (auto& [id, block] : this->blocks_) {
+        auto tit = this->types_.find(block.type_id());
+        if (tit != this->types_.end() && tit->second.ephemeral) {
+            to_destroy.push_back(id);
+        }
+    }
+    for (auto& id : to_destroy) {
+        auto bit = this->blocks_.find(id);
+        if (bit != this->blocks_.end()) {
+            uint32_t type_id = bit->second.type_id();
+            this->blocks_.erase(bit);
+            auto tc_it = this->type_counts_.find(type_id);
+            if (tc_it != this->type_counts_.end() && tc_it->second > 0) {
+                tc_it->second--;
+            }
+        }
+    }
+}
+
+// ── Layout Methods ────────────────────────────────────────────────
+
+template <typename S>
+void Runtime<S>::ensure_soa_storage(uint32_t type_id) {
+    if (this->layout_storage_.contains(type_id)) return;
+
+    auto it = this->types_.find(type_id);
+    if (it == this->types_.end()) return;
+
+    auto& desc = it->second;
+    SoAStorage storage;
+
+    // Initialize field arrays from BlockTypeDescriptor fields
+    for (auto& field : desc.fields) {
+        SoAFieldArray fa;
+        fa.field_size     = field.size;
+        fa.field_offset   = field.offset;
+        fa.field_alignment = field.alignment;
+        storage.fields.push_back(std::move(fa));
+    }
+
+    // If no explicit fields registered, create one field for the whole block
+    if (desc.fields.empty()) {
+        SoAFieldArray fa;
+        fa.field_size     = desc.size;
+        fa.field_offset   = 0;
+        fa.field_alignment = desc.alignment;
+        storage.fields.push_back(std::move(fa));
+    }
+
+    this->layout_storage_[type_id] = std::move(storage);
+}
+
+template <typename S>
+void Runtime<S>::convert_to_soa(uint32_t type_id) {
+    auto& desc = this->types_[type_id];
+    if (desc.layout == LayoutStrategy::SoA) return;
+
+    ensure_soa_storage(type_id);
+    auto& storage = this->layout_storage_[type_id];
+
+    // Collect existing blocks of this type
+    std::vector<std::pair<core::Identity, DataBlock>> existing;
+    for (auto& [id, block] : this->blocks_) {
+        if (block.type_id() == type_id) {
+            existing.emplace_back(id, std::move(block));
+        }
+    }
+
+    // Remove AoS blocks, they'll be in SoA storage now
+    for (auto& [id, _] : existing) {
+        (void)_;
+        this->blocks_.erase(id);
+    }
+
+    // Populate SoA storage
+    for (auto& [id, block] : existing) {
+        storage.identities.push_back(id);
+        for (size_t fi = 0; fi < storage.fields.size(); ++fi) {
+            auto& fa = storage.fields[fi];
+            size_t old_pos = fa.field_offset;
+            size_t copy_size = std::min(fa.field_size, block.size() - old_pos);
+            size_t new_pos = (storage.identities.size() - 1) * fa.field_size + fa.field_offset;
+            if (fa.data.size() < new_pos + copy_size) {
+                fa.data.resize(new_pos + copy_size);
+            }
+            std::memcpy(fa.data.data() + new_pos,
+                        static_cast<const std::byte*>(block.data()) + old_pos,
+                        copy_size);
+        }
+    }
+
+    desc.layout = LayoutStrategy::SoA;
+}
+
+template <typename S>
+void Runtime<S>::convert_from_soa(uint32_t type_id) {
+    auto& desc = this->types_[type_id];
+    if (desc.layout != LayoutStrategy::SoA) return;
+
+    auto it = this->layout_storage_.find(type_id);
+    if (it == this->layout_storage_.end()) return;
+
+    auto& storage = it->second;
+
+    // Recreate AoS blocks from SoA storage
+    for (size_t i = 0; i < storage.identities.size(); ++i) {
+        core::Identity id = storage.identities[i];
+        DataBlock block{id, type_id, desc.size, desc.alignment};
+        for (size_t fi = 0; fi < storage.fields.size(); ++fi) {
+            auto& fa = storage.fields[fi];
+            size_t src_pos = i * fa.field_size + fa.field_offset;
+            size_t copy_size = std::min(fa.field_size, desc.size - fa.field_offset);
+            if (src_pos + copy_size <= fa.data.size()) {
+                std::memcpy(static_cast<std::byte*>(block.data()) + fa.field_offset,
+                            fa.data.data() + src_pos, copy_size);
+            }
+        }
+        this->blocks_.emplace(id, std::move(block));
+    }
+
+    this->layout_storage_.erase(type_id);
+    desc.layout = LayoutStrategy::AoS;
 }
 
 } // namespace gameak::runtime

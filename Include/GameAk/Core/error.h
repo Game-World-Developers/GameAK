@@ -20,6 +20,7 @@ enum class ErrorCode : uint32_t {
     ControllerFailed,
     DuplicateRegistration,
     CapacityExceeded,
+    LayoutMismatch,
 };
 
 class Error {

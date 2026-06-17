@@ -2,6 +2,7 @@
 
 #include "command.h"
 #include "data_block.h"
+#include "layout_strategy.h"
 
 #include <cstring>
 
@@ -60,6 +61,13 @@ inline core::Result<void> validate_command(
             }
             return {};
         }
+        case CommandType::ConvertLayout: {
+            const auto& payload = std::get<CommandConvertLayout>(command.payload());
+            if (!types.contains(payload.type_id)) {
+                return core::Error{core::ErrorCode::TypeNotRegistered, "Block type not registered for layout conversion"};
+            }
+            return {};
+        }
     }
     return core::Error{core::ErrorCode::InternalError, "Unknown command type"};
 }
@@ -109,6 +117,14 @@ inline core::Result<void> execute_command(
                 }
                 std::memcpy(static_cast<std::byte*>(it->second.data()) + payload.offset,
                             payload.data.data(), payload.data.size());
+            }
+            return {};
+        }
+        case CommandType::ConvertLayout: {
+            auto& payload = std::get<CommandConvertLayout>(command.payload());
+            auto it = types.find(payload.type_id);
+            if (it == types.end()) {
+                return core::Error{core::ErrorCode::TypeNotRegistered};
             }
             return {};
         }

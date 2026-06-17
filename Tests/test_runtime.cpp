@@ -8,6 +8,14 @@
 #include "GameAk/Core/intrusive_list.h"
 #include "GameAk/Core/avl_tree.h"
 #include "GameAk/Core/rb_tree.h"
+#include "GameAk/Core/bitset.h"
+#include "GameAk/Core/bitvector.h"
+#include "GameAk/Core/bitflags.h"
+#include "GameAk/Core/bit_packing.h"
+#include "GameAk/Runtime/fsm.h"
+#include "GameAk/Runtime/rule_system.h"
+#include "GameAk/Runtime/pipeline.h"
+#include "GameAk/Runtime/event_loop.h"
 #include "GameAk/Runtime/runtime.h"
 #include "GameAk/Runtime/controller.h"
 #include "GameAk/Runtime/command.h"
@@ -31,6 +39,13 @@
 #include "test_controller.h"
 #include "test_avl_tree.h"
 #include "test_rb_tree.h"
+#include "test_bit_representation.h"
+#include "test_data_layout.h"
+#include "test_fsm.h"
+#include "test_rule_system.h"
+#include "test_pipeline.h"
+#include "test_event_loop.h"
+#include "test_ephemeral.h"
 
 using namespace gameak::core;
 using namespace gameak::runtime;
@@ -189,7 +204,7 @@ describe("Runtime", {
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
 
-        auto controller = [](StateView&, CommandProducer&) -> Result<void> { return {}; };
+        auto controller = [](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> { return {}; };
         expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
 
         auto id = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -273,7 +288,7 @@ describe("Runtime", {
         expect(rt.is_paused()).toBeFalsy();
 
         // Add a controller to verify execution
-        auto controller = [](StateView&, CommandProducer&) -> Result<void> { return {}; };
+        auto controller = [](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> { return {}; };
         expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
 
         auto r2 = rt.tick();
@@ -295,7 +310,7 @@ describe("Runtime", {
 
         // Submit one command per tick via a controller
         int controller_invocations = 0;
-        auto controller = [&](StateView&, CommandProducer& producer) -> Result<void> {
+        auto controller = [&](StateView&, CommandProducer& producer, EphemeralProducer&) -> Result<void> {
             controller_invocations++;
             auto r = producer.produce(Command{CommandCreateBlock{1}});
             if (!r) return r.error();
@@ -316,7 +331,7 @@ describe("Runtime", {
         DefaultRuntime rt;
 
         float captured_delta = 0.0f;
-        auto controller = [&](StateView& view, CommandProducer&) -> Result<void> {
+        auto controller = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
             captured_delta = view.time_delta();
             return {};
         };
@@ -334,7 +349,7 @@ describe("Runtime", {
         DefaultRuntime rt;
 
         float captured = 0.0f;
-        auto controller = [&](StateView& view, CommandProducer&) -> Result<void> {
+        auto controller = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
             captured = view.time_delta();
             return {};
         };
@@ -825,5 +840,12 @@ int main(int argc, char* argv[]) {
     run_relationship_tests();
     run_avl_tree_tests();
     run_rb_tree_tests();
+    run_bit_representation_tests();
+    run_data_layout_tests();
+    run_fsm_tests();
+    run_rule_system_tests();
+    run_pipeline_tests();
+    run_event_loop_tests();
+    run_ephemeral_tests();
     return cest_result();
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "layout_strategy.h"
+
 #include "GameAk/Core/error.h"
 #include "GameAk/Core/identity.h"
 #include "GameAk/Core/result.h"
@@ -24,6 +26,7 @@ enum class CommandType : uint32_t {
     DestroyBlock,
     SetField,
     ResizeBlock,
+    ConvertLayout,
 };
 
 struct CommandCreateBlock {
@@ -45,7 +48,15 @@ struct CommandResizeBlock {
     size_t new_size;
 };
 
-using CommandPayload = std::variant<CommandCreateBlock, CommandDestroyBlock, CommandSetField, CommandResizeBlock>;
+struct CommandConvertLayout {
+    uint32_t type_id;
+    LayoutStrategy new_layout;
+    AoSoAConfig aosoa_config{};
+};
+
+using CommandPayload = std::variant<CommandCreateBlock, CommandDestroyBlock,
+                                     CommandSetField, CommandResizeBlock,
+                                     CommandConvertLayout>;
 
 class Command {
     template <typename> friend class Runtime;

@@ -16,7 +16,7 @@ describe("Controllers", {
         auto r1 = rt.register_block_type(desc);
         expect(r1.has_value()).toBeTruthy();
 
-        auto controller = [](StateView&, CommandProducer& producer) -> Result<void> {
+        auto controller = [](StateView&, CommandProducer& producer, EphemeralProducer&) -> Result<void> {
             auto result = producer.produce(Command{CommandCreateBlock{1}});
             if (!result) return result.error();
             return {};
@@ -41,7 +41,7 @@ describe("Controllers", {
         auto r1 = rt.register_block_type(desc);
         expect(r1.has_value()).toBeTruthy();
 
-        auto controller = [](StateView&, CommandProducer& producer) -> Result<void> {
+        auto controller = [](StateView&, CommandProducer& producer, EphemeralProducer&) -> Result<void> {
             auto r1 = producer.produce(Command{CommandCreateBlock{1}});
             if (!r1) return r1.error();
             auto r2 = producer.produce(Command{CommandCreateBlock{1}});
@@ -67,7 +67,7 @@ describe("Controllers", {
         desc.name = "test";
         expect(rt.register_block_type(desc).has_value()).toBeTruthy();
 
-        auto controller = [](StateView&, CommandProducer&) -> Result<void> {
+        auto controller = [](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             return Error(ErrorCode::ControllerFailed, "controller error");
         };
 
@@ -90,7 +90,7 @@ describe("Controllers", {
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
 
-        auto controller = [id = block.value()](StateView& view, CommandProducer&) -> Result<void> {
+        auto controller = [id = block.value()](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
             if (!view.has_block(id)) {
                 return Error(ErrorCode::BlockNotFound, "block not found");
             }
@@ -121,7 +121,7 @@ describe("Controllers", {
         expect(rt.register_block_type(desc).has_value()).toBeTruthy();
 
         float captured_delta = 0.0f;
-        auto controller = [&](StateView& view, CommandProducer&) -> Result<void> {
+        auto controller = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
             captured_delta = view.time_delta();
             return {};
         };
@@ -135,7 +135,7 @@ describe("Controllers", {
     it("StateView time delta defaults to 16ms", {
         DefaultRuntime rt;
         float captured_delta = 0.0f;
-        auto controller = [&](StateView& view, CommandProducer&) -> Result<void> {
+        auto controller = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
             captured_delta = view.time_delta();
             return {};
         };
@@ -150,15 +150,15 @@ describe("Controllers", {
         DefaultRuntime rt;
         std::vector<int> order;
 
-        auto low = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto low = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             order.push_back(1);
             return {};
         };
-        auto mid = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto mid = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             order.push_back(2);
             return {};
         };
-        auto high = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto high = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             order.push_back(3);
             return {};
         };
@@ -181,15 +181,15 @@ describe("Controllers", {
         DefaultRuntime rt;
         std::vector<int> order;
 
-        auto first = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto first = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             order.push_back(1);
             return {};
         };
-        auto second = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto second = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             order.push_back(2);
             return {};
         };
-        auto third = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto third = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             order.push_back(3);
             return {};
         };
@@ -210,7 +210,7 @@ describe("Controllers", {
     it("single-arg register_controller uses default priority 0", {
         DefaultRuntime rt;
         int exec_count = 0;
-        auto controller = [&](StateView&, CommandProducer&) -> Result<void> {
+        auto controller = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             exec_count++;
             return {};
         };

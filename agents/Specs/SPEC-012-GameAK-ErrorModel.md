@@ -70,6 +70,7 @@ InternalError         Internal Runtime error
 ControllerFailed      Controller execution failed
 DuplicateRegistration Type or Controller already registered
 CapacityExceeded      Runtime capacity limit reached
+LayoutMismatch        Layout conversion failed
 ```
 
 ---

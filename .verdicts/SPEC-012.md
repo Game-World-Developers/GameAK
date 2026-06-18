@@ -26,7 +26,8 @@ The spec does not include a `Cancelled` error code. This is correct — cancella
 
 - **Error code `None`:** Used as a "no error" sentinel. Its usage pattern is not defined (zero-initialization of Error type? Success state for Result?).
 - **`InternalError`:** Very generic. By design — the spec says it represents unspecified internal failures.
-- **Compile-time guarantees:** The spec requires 12 error codes but doesn't specify that this is an exhaustive enumeration (new codes may be added).
+- **Compile-time guarantees:** The spec requires 13 error codes but doesn't specify that this is an exhaustive enumeration (new codes may be added).
+- **`LayoutMismatch`:** Added as a 14th error code during implementation. The spec has been updated accordingly.
 
 ## Open Questions
 

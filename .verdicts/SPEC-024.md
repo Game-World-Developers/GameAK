@@ -2,7 +2,7 @@
 
 **Validation timestamp:** 2026-06-17
 
-**Verdict:** READY
+**Verdict:** READY / IMPLEMENTED
 
 ## Assessment
 
@@ -35,6 +35,18 @@ None. All questions answered.
 - Refactored FSM/EventLoop/Pipeline should use ephemeral blocks internally where appropriate.
 - The block event diff timing adjustment is the only non-obvious implementation detail.
 
-## Update Required
+## Implementation Status
 
-- [ ] SPEC-024: Add timing clarification about block event snapshot capture ordering
+SPEC-024 has been **fully implemented**. See verification below.
+
+### Implementation Checklist
+
+- ✅ `bool ephemeral{false}` in `BlockTypeDescriptor` (`block_type.h:26`)
+- ✅ `EphemeralProducer` class with `create()` method (`controller.h:61-74`)
+- ✅ Controller signature updated to 3 parameters: `(StateView&, CommandProducer&, EphemeralProducer&)` (`controller.h:19`)
+- ✅ `create_ephemeral_block()` / `destroy_all_ephemeral()` in Runtime (`runtime.h:187-197`, `runtime.h:674-710`)
+- ✅ Snapshot excludes ephemeral blocks (`runtime.h:576-584`)
+- ✅ FSM, RuleSystem, EventLoop, Pipeline all updated to 3-param signature
+- ✅ `test_ephemeral.h` with 6 passing tests
+- ✅ Block event diff timing: snapshot captured after Controller Execution Phase, before Command Processing Phase (`runtime.h:498-522`)
+- ✅ Ephemeral blocks destroyed at TickEnd before TickEnd event fires (`runtime.h:539-540`)

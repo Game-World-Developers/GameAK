@@ -46,6 +46,12 @@
 #include "test_pipeline.h"
 #include "test_event_loop.h"
 #include "test_ephemeral.h"
+#include "test_scheduler.h"
+#include "test_integration.h"
+#include "test_stress.h"
+#include "test_fuzz.h"
+#include "test_e2e.h"
+#include "test_edge_cases.h"
 
 using namespace gameak::core;
 using namespace gameak::runtime;
@@ -847,5 +853,11 @@ int main(int argc, char* argv[]) {
     run_pipeline_tests();
     run_event_loop_tests();
     run_ephemeral_tests();
+    run_scheduler_tests();
+    run_integration_tests();
+    run_stress_tests();
+    run_fuzz_tests();
+    run_e2e_tests();
+    run_edge_case_tests();
     return cest_result();
 }

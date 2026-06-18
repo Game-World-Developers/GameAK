@@ -288,6 +288,7 @@ Runtime<S>::~Runtime() {
 
 template <typename S>
 void Runtime<S>::apply_log_level(LogLevel level) {
+#ifdef GAME_AK_HAVE_SPDLOG
     switch (level) {
         case LogLevel::Trace: spdlog::set_level(spdlog::level::trace); break;
         case LogLevel::Debug: spdlog::set_level(spdlog::level::debug); break;
@@ -297,6 +298,9 @@ void Runtime<S>::apply_log_level(LogLevel level) {
         case LogLevel::Critical: spdlog::set_level(spdlog::level::critical); break;
         case LogLevel::Off:   spdlog::set_level(spdlog::level::off);   break;
     }
+#else
+    (void)level;
+#endif
 }
 
 template <typename S>

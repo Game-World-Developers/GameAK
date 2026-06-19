@@ -48,7 +48,7 @@ TEST_BIN  := $(BUILD_DIR)/gameak_test
 
 .PHONY: all test clean install
 
-all: $(LIB)
+all: clean test $(LIB)
 
 test: $(TEST_BIN)
 	./$(TEST_BIN) --quiet

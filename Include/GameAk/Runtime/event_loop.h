@@ -31,6 +31,12 @@ public:
         return id;
     }
 
+    // ── Conversation-style chaining ─────────────────────────────────
+    EventLoop& handle(EventTypeId type, Handler handler) {
+        on(type, std::move(handler));
+        return *this;
+    }
+
     void off(HandlerId id) {
         for (auto& [type, vec] : handlers_) {
             (void)type;

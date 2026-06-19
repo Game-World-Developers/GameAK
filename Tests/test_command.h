@@ -327,5 +327,82 @@ describe("Commands", {
         expect(result.commands_rejected == 1).toBeTruthy();
         expect(result.rejected_commands[0].error.code() == ErrorCode::InvalidIdentity).toBeTruthy();
     });
+
+    it("conversation_command_create_block_factory", {
+        auto cmd = Command::create_block(1);
+        expect(cmd.type() == CommandType::CreateBlock).toBeTruthy();
+        const auto& payload = std::get<CommandCreateBlock>(cmd.payload());
+        expect(payload.type_id == 1).toBeTruthy();
+    });
+
+    it("conversation_command_destroy_block_factory", {
+        Identity id{42};
+        auto cmd = Command::destroy_block(id);
+        expect(cmd.type() == CommandType::DestroyBlock).toBeTruthy();
+        const auto& payload = std::get<CommandDestroyBlock>(cmd.payload());
+        expect(payload.targets.size() == 1).toBeTruthy();
+        expect(payload.targets[0] == id).toBeTruthy();
+    });
+
+    it("conversation_command_set_field_factory", {
+        Identity id{1};
+        int value = 42;
+        auto cmd = Command::set_field(id, 8, value);
+        expect(cmd.type() == CommandType::SetField).toBeTruthy();
+        const auto& payload = std::get<CommandSetField>(cmd.payload());
+        expect(payload.targets.size() == 1).toBeTruthy();
+        expect(payload.targets[0] == id).toBeTruthy();
+        expect(payload.offset == 8).toBeTruthy();
+        expect(payload.data.size() == sizeof(int)).toBeTruthy();
+    });
+
+    it("conversation_command_set_field_raw", {
+        Identity id(1);
+        std::byte bytes[4];
+        bytes[0] = static_cast<std::byte>(1);
+        bytes[1] = static_cast<std::byte>(2);
+        bytes[2] = static_cast<std::byte>(3);
+        bytes[3] = static_cast<std::byte>(4);
+        auto cmd = Command::set_field_raw(id, 0, bytes, 4);
+        expect(cmd.type() == CommandType::SetField).toBeTruthy();
+    });
+
+    it("conversation_command_resize_block_factory", {
+        Identity id{1};
+        auto cmd = Command::resize_block(id, 64);
+        expect(cmd.type() == CommandType::ResizeBlock).toBeTruthy();
+        const auto& payload = std::get<CommandResizeBlock>(cmd.payload());
+        expect(payload.targets.size() == 1).toBeTruthy();
+        expect(payload.new_size == 64).toBeTruthy();
+    });
+
+    it("conversation_command_convert_layout_factory", {
+        auto cmd = Command::convert_layout(1, LayoutStrategy::SoA);
+        expect(cmd.type() == CommandType::ConvertLayout).toBeTruthy();
+        const auto& payload = std::get<CommandConvertLayout>(cmd.payload());
+        expect(payload.type_id == 1).toBeTruthy();
+        expect(payload.new_layout == LayoutStrategy::SoA).toBeTruthy();
+    });
+
+    it("conversation_command_create_destroy_via_runtime", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto id = rt.submit_command(Command::create_block(1));
+        expect(id.has_value()).toBeTruthy();
+
+        auto r = rt.tick();
+        expect(r.commands_executed == 1).toBeTruthy();
+        expect(rt.block_count(1) == 1).toBeTruthy();
+
+        auto blocks = rt.blocks_of_type(1);
+        auto destroy = rt.submit_command(Command::destroy_block(blocks[0]));
+        expect(destroy.has_value()).toBeTruthy();
+        r = rt.tick();
+        expect(r.commands_executed == 1).toBeTruthy();
+        expect(rt.block_count(1) == 0).toBeTruthy();
+    });
 });
 }

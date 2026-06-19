@@ -149,6 +149,29 @@ namespace rule_helpers {
         auto r = rt.tick();
         expect(fires == 0).toBeTruthy();
     }
+
+    void test_rule_system_chaining() {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        int fires = 0;
+        auto action = [&](StateView&, CommandProducer& prod, EphemeralProducer&) {
+            fires++;
+            auto _ = prod.create(1);
+            (void)_;
+        };
+
+        auto ctrl = RuleSystem{}
+            .rule("first",  [](StateView&) { return true; }, action, 0)
+            .rule("second", [](StateView&) { return true; }, action, 0)
+            .build();
+
+        expect(rt.register_controller(std::move(ctrl)).has_value()).toBeTruthy();
+        rt.tick();
+        expect(fires == 2).toBeTruthy();
+    }
 }
 }
 
@@ -162,5 +185,6 @@ describe("RuleSystem", {
     it("empty system",                      { rule_helpers::test_empty_rule_system(); });
     it("is a Controller",                   { rule_helpers::test_rule_system_is_controller(); });
     it("dynamic add/remove",                { rule_helpers::test_dynamic_add_remove(); });
+    it("conversation_rule_chaining",        { rule_helpers::test_rule_system_chaining(); });
 });
 }

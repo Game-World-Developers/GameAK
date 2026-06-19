@@ -2,7 +2,7 @@
 
 Status: READY
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -239,6 +239,66 @@ Examples include:
 * Status codes
 
 Exceptions may be used by tooling, integrations, or external adapters when appropriate.
+
+* [ ] Should Object Calisthenics rules be enumerated?
+
+**Answer:** Yes.
+
+The nine Object Calisthenics rules are:
+
+1. Only One Level of Indentation Per Method.
+2. Don't Use the ELSE Keyword.
+3. Wrap All Primitives and Strings.
+4. First-Class Collections.
+5. One Dot Per Line.
+6. Don't Abbreviate.
+7. Keep All Entities Small.
+8. No Classes With More Than Two Instance Variables.
+9. No Getters/Setters/Properties.
+
+These rules are design guidance, not strict enforcement. They may be relaxed when data-oriented design or runtime performance justifies exceptions.
+
+* [ ] How is the Runtime Core boundary defined?
+
+**Answer:** The Runtime Core is the portion of GameAK responsible for simulation state and execution. It corresponds to all code under `src/Runtime/`. Code outside this directory is not part of the runtime core and is not subject to its constraints (e.g., the no-exceptions rule).
+
+* [ ] What constitutes a "Plain Data Structure" and "Value Type"?
+
+**Answer:**
+
+* **Plain Data Structure (PDS):** A class or struct with public data members and no invariants. It is directly constructable, copyable, and assignable. Examples: `Vec2`, `Color`, `BlockId`.
+* **Value Type:** A type with value semantics: copyable, comparable, and independently usable. Value types may encapsulate behavior as long as they remain copyable and equality-comparable.
+* **Bit-Oriented Structure:** A type whose representation maps directly to a specific bit layout for serialization or hardware interaction.
+* **Layout-Specific Container:** A container whose memory layout is explicitly designed for a specific access pattern (e.g., SoA, AoSoA).
+
+* [ ] What does Law of Demeter consider "direct collaborators"?
+
+**Answer:** A module's direct collaborators are:
+
+* Its own data members.
+* Its function parameters.
+* Objects it creates directly.
+* Objects returned from its direct collaborators (one dot, no chaining).
+
+Accessing transitive relationships (e.g., `a.b().c()`) violates the Law of Demeter unless the intermediate types are explicitly part of the public API contract.
+
+* [ ] How should Simplicity First and Dependency Inversion be resolved when they conflict?
+
+**Answer:** Simplicity First takes precedence when both approaches lead to the same observable behavior. Dependency Inversion should only be applied when there is a demonstrable need to swap implementations at compile time or runtime. Premature abstraction is discouraged.
+
+As a tiebreaker:
+
+1. If the dependency is stable and unlikely to change, prefer Simplicity First.
+2. If the dependency has multiple valid implementations, prefer Dependency Inversion.
+3. When in doubt, prefer Simplicity First.
+
+* [ ] Many subjective constraints are unverifiable by tests — is this acceptable?
+
+**Answer:** Yes. This is by design. Subjective constraints (naming conventions, readability, organization) are guidelines for human engineers, not automated checks. Only verifiable runtime behaviors require tests. This is explicitly stated in the Testing Requirements section under the exemption for subjective or qualitative constraints.
+
+* [ ] How should the CI enforce spec status-to-test correspondence?
+
+**Answer:** A validation script `.ci/check-spec-status.sh` must verify that for every behavioral spec promoted to `IMPLEMENTED`, corresponding test files exist under `Tests/` and compile successfully. The CI pipeline must run this script and reject the promotion if tests are missing or fail to compile. The mechanism for determining corresponding test files is: for each `agents/Specs/SPEC-NNN-*.md` with `Status: IMPLEMENTED`, there must be at least one file matching `Tests/test_<spec-area>.cpp` containing tests that cover the spec's behaviors.
 
 ---
 

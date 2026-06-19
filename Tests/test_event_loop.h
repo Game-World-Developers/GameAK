@@ -135,6 +135,21 @@ namespace event_loop_helpers {
         expect(r1.status == ExecutionStatus::Success).toBeTruthy();
         expect(el.pending_count() == 0).toBeTruthy();
     }
+
+    void test_event_loop_chaining() {
+        int fired = 0;
+        auto ctrl = EventLoop<int>{}
+            .handle(1, [&](const int&, CommandProducer&, EphemeralProducer&) { fired++; })
+            .handle(2, [&](const int&, CommandProducer&, EphemeralProducer&) { fired++; })
+            .build();
+
+        DefaultRuntime rt;
+        auto controller = [&](StateView&, CommandProducer&, EphemeralProducer& ephem) -> Result<void> {
+            static_cast<void>(ephem);
+            return {};
+        };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+    }
 }
 }
 
@@ -148,5 +163,6 @@ describe("EventLoop", {
     it("is a Controller",                    { event_loop_helpers::test_event_loop_is_controller(); });
     it("handlers produce commands",          { event_loop_helpers::test_handlers_produce_commands(); });
     it("no state between ticks",             { event_loop_helpers::test_no_state_between_ticks(); });
+    it("conversation_event_loop_chaining",   { event_loop_helpers::test_event_loop_chaining(); });
 });
 }

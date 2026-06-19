@@ -24,6 +24,12 @@ class Pipeline {
 public:
     StageId add_stage(std::string name, Controller controller);
 
+    // ── Conversation-style chaining ─────────────────────────────────
+    Pipeline& stage(std::string name, Controller controller) {
+        add_stage(std::move(name), std::move(controller));
+        return *this;
+    }
+
     void remove_stage(StageId id);
 
     void clear_stages();

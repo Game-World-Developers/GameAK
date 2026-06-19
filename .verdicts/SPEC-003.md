@@ -36,6 +36,16 @@ All four open questions in the spec have been answered. No unresolved questions 
 - All layers have explicit requirements and constraints.
 - Testing requirements are clear (same test suite for all implementations).
 
+## Changes Since Validation
+
+An **Implementation Mechanism: CRTP** section was added to define how platform, compiler, and CPU specializations use the Curiously Recurring Template Pattern for indirect inheritance. This is an additive clarification — no existing requirements were changed or removed.
+
+### CRTP Additions
+
+- New section defines CRTP as the mechanism for static polymorphism across OS, compiler, and CPU layers.
+- Pattern, application, requirements, and rationale are explicitly documented.
+- CRTP is explicitly consistent with the Composition Over Inheritance principle (SPEC-004).
+
 ## Final Determination
 
 **SPEC-003 is READY for implementation.**

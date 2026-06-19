@@ -221,5 +221,43 @@ describe("Controllers", {
         expect(exec_count == 1).toBeTruthy();
         expect(result.controllers_executed == 1).toBeTruthy();
     });
+
+    it("conversation_command_producer_create", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto controller = [&](StateView&, CommandProducer& prod, EphemeralProducer&) -> Result<void> {
+            return prod.create(1);
+        };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+
+        auto result = rt.tick();
+        expect(result.status == ExecutionStatus::Success).toBeTruthy();
+        expect(result.commands_executed == 1).toBeTruthy();
+    });
+
+    it("conversation_command_producer_destroy", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        auto block = rt.create_block(1);
+        expect(block.has_value()).toBeTruthy();
+        auto block_id = block.value();
+
+        auto controller = [&](StateView&, CommandProducer& prod, EphemeralProducer&) -> Result<void> {
+            auto _ = prod.destroy(block_id);
+            (void)_;
+            return {};
+        };
+        expect(rt.register_controller(std::move(controller)).has_value()).toBeTruthy();
+
+        auto r = rt.tick();
+        expect(r.status == ExecutionStatus::Success).toBeTruthy();
+        expect(rt.has_block(block_id)).toBeFalsy();
+    });
 });
 }

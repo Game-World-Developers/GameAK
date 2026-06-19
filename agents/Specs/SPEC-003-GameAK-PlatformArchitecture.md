@@ -2,7 +2,7 @@
 
 Status: READY
 
-Last validated by Ralph: never
+Last validated by Ralph: 2026-06-13
 
 ---
 
@@ -111,6 +111,55 @@ Requirements:
 * Must remain isolated.
 * Must expose consistent interfaces.
 * Must not leak platform-specific behavior into the runtime.
+
+---
+
+## Implementation Mechanism: CRTP
+
+Platform, compiler, and CPU specializations use the Curiously Recurring Template Pattern (CRTP) to provide indirect inheritance without runtime overhead or virtual dispatch.
+
+### Pattern
+
+```cpp
+template<typename Derived>
+struct PlatformBase {
+    void operation() {
+        static_cast<Derived*>(this)->operation_impl();
+    }
+};
+```
+
+Each concrete specialization derives from a CRTP base parameterized on itself:
+
+```text
+CrtpBase<Derived>
+    ↑
+  Derived
+```
+
+### Application
+
+* **Operating systems:** Each OS specialization derives from `OsPlatform<Derived>`.
+* **Compilers:** Each compiler specialization derives from `CompilerPlatform<Derived>`.
+* **CPU architectures:** Each instruction set specialization derives from `CpuPlatform<Derived>`.
+
+### Requirements
+
+* CRTP bases must define the public interface contract.
+* Derived classes must implement the specialized behavior.
+* CRTP bases must not contain platform-specific logic.
+* CRTP bases must compile correctly for any well-formed derived class.
+* CRTP must not be used outside platform specialization layers.
+
+### Rationale
+
+CRTP provides:
+
+* **Static polymorphism:** No virtual table overhead at runtime.
+* **Type safety:** Each derived type is distinct and checked at compile time.
+* **Interface enforcement:** The base template defines the contract without dictating implementation.
+
+CRTP is consistent with the Composition Over Inheritance principle (SPEC-004), as it models static polymorphism rather than runtime class hierarchy.
 
 ---
 

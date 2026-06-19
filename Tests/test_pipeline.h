@@ -130,6 +130,27 @@ namespace pipeline_helpers {
         pipe.add_stage("permanent", [](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> { return {}; });
         expect(pipe.stage_count() == 1).toBeTruthy();
     }
+
+    void test_pipeline_chaining() {
+        std::vector<int> order;
+        auto ctrl = Pipeline{}
+            .stage("first", [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
+                order.push_back(1);
+                return {};
+            })
+            .stage("second", [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
+                order.push_back(2);
+                return {};
+            })
+            .build();
+
+        DefaultRuntime rt;
+        expect(rt.register_controller(std::move(ctrl)).has_value()).toBeTruthy();
+        rt.tick();
+        expect(order.size() == 2).toBeTruthy();
+        expect(order[0] == 1).toBeTruthy();
+        expect(order[1] == 2).toBeTruthy();
+    }
 }
 }
 
@@ -143,5 +164,6 @@ describe("Pipeline", {
     it("Pipeline is a Controller",          { pipeline_helpers::test_pipeline_is_controller(); });
     it("stage failure isolation",           { pipeline_helpers::test_stage_failure_isolation(); });
     it("dynamic add/remove",                { pipeline_helpers::test_dynamic_add_remove(); });
+    it("conversation_pipeline_chaining",    { pipeline_helpers::test_pipeline_chaining(); });
 });
 }

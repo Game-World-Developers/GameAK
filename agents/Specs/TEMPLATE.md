@@ -1,5 +1,7 @@
 # SPEC-XXX: Feature Name
 
+Layer: AK | Runtime | Foundation
+
 Status: DRAFT
 
 Last validated by Ralph: never

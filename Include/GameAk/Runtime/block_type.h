@@ -1,6 +1,7 @@
 #pragma once
 
 #include "layout_strategy.h"
+#include "GameAk/Core/semantic.h"
 
 #include <cstdint>
 #include <string>
@@ -24,6 +25,7 @@ struct BlockTypeDescriptor {
     AoSoAConfig aosoa_config{};
     std::vector<FieldDescriptor> fields;
     bool ephemeral{false};
+    const core::SemanticConstraint* semantic{nullptr};
 };
 
 } // namespace gameak::runtime

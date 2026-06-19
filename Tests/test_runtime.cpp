@@ -51,6 +51,7 @@
 #include "test_stress.h"
 #include "test_fuzz.h"
 #include "test_e2e.h"
+#include "test_semantic.h"
 #include "test_edge_cases.h"
 
 using namespace gameak::core;
@@ -463,6 +464,42 @@ describe("Runtime", {
         auto all = rt.find_blocks([](const DataBlock&) { return true; });
         expect(all.size() == 3).toBeTruthy();
     });
+
+    it("conversation_blocks_of_type", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc1;
+        desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "type1";
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "type2";
+        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
+        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+
+        auto b1 = rt.create_block(1);
+        auto b2 = rt.create_block(2);
+        auto b3 = rt.create_block(1);
+        expect(b1.has_value() && b2.has_value() && b3.has_value()).toBeTruthy();
+
+        auto type1 = rt.blocks_of_type(1);
+        auto type2 = rt.blocks_of_type(2);
+        expect(type1.size() == 2).toBeTruthy();
+        expect(type2.size() == 1).toBeTruthy();
+    });
+
+    it("conversation_blocks_where", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = 16; desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+        expect(rt.create_block(1).has_value()).toBeTruthy();
+
+        auto all = rt.blocks_where([](const DataBlock&) { return true; });
+        expect(all.size() == 2).toBeTruthy();
+
+        auto none = rt.blocks_where([](const DataBlock&) { return false; });
+        expect(none.size() == 0).toBeTruthy();
+    });
 });
 }
 
@@ -580,6 +617,42 @@ describe("Events", {
         rt.tick();
         expect(count_a == 1).toBeTruthy();
         expect(count_b == 1).toBeTruthy();
+    });
+
+    it("conversation_on_tick_begin_end", {
+        DefaultRuntime rt;
+        int begin_count = 0;
+        int end_count = 0;
+
+        rt.on_tick_begin([&](const Runtime<FifoScheduler>::Event&) { begin_count++; });
+        rt.on_tick_end([&](const Runtime<FifoScheduler>::Event&) { end_count++; });
+
+        rt.tick();
+        expect(begin_count == 1).toBeTruthy();
+        expect(end_count == 1).toBeTruthy();
+    });
+
+    it("conversation_on_block_created_destroyed", {
+        DefaultRuntime rt;
+        BlockTypeDescriptor desc;
+        desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
+        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+
+        int created = 0;
+        int destroyed = 0;
+
+        rt.on_block_created([&](const Runtime<FifoScheduler>::Event&) { created++; });
+        rt.on_block_destroyed([&](const Runtime<FifoScheduler>::Event&) { destroyed++; });
+
+        auto block = rt.create_block(1);
+        expect(block.has_value()).toBeTruthy();
+
+        auto _ = rt.submit_command(Command{CommandDestroyBlock{{block.value()}}});
+        (void)_;
+        rt.tick();
+
+        expect(created == 0).toBeTruthy();  // no command created it
+        expect(destroyed == 1).toBeTruthy();
     });
 });
 }
@@ -859,5 +932,6 @@ int main(int argc, char* argv[]) {
     run_fuzz_tests();
     run_e2e_tests();
     run_edge_case_tests();
+    run_semantic_tests();
     return cest_result();
 }

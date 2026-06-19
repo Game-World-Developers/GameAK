@@ -9,19 +9,19 @@
 * **Self-referential paradox:** Testing Requirements section was scoped to "behavioral specs" (SPEC-005 through SPEC-016). SPEC-004 is explicitly a meta-spec and exempt. Subjective/qualitative constraints (naming, readability, etc.) are exempt from test requirements.
 * **Constraint-testability conflict:** Only verifiable runtime behaviors require tests. Style guidelines are explicitly excluded.
 
-## Pre-existing unresolved questions (tracked separately)
+## Changes Since Validation
 
-These were present before the edit and are outside the scope of this change:
+All 7 pre-existing unresolved questions have been answered and added to the Open Questions section of SPEC-004:
 
-1. Object Calisthenics rules not enumerated.
-2. Runtime Core boundary not defined.
-3. "Plain data structure" / "Value type" / etc. not defined.
-4. Law of Demeter "direct collaborators" not defined.
-5. Simplicity First vs. Dependency Inversion conflict — no tiebreaker.
-6. Many subjective constraints unverifiable (by design — see scope exemption above).
-7. CI enforcement mechanism for status changes not specified.
-
-These do not block the Testing Requirements addition. They may be addressed in a future revision.
+| # | Question | Resolution |
+|---|----------|------------|
+| 1 | Object Calisthenics rules | All 9 rules enumerated as design guidance with explicit relaxation criteria |
+| 2 | Runtime Core boundary | Defined as `src/Runtime/` directory |
+| 3 | Plain Data Structure / Value Type | Both terms defined with examples |
+| 4 | Law of Demeter "direct collaborators" | Defined: data members, parameters, directly created objects, returned objects (single dot) |
+| 5 | Simplicity First vs Dependency Inversion | Tiebreaker added: Simplicity First wins unless DI is demonstrably needed |
+| 6 | Subjective constraints unverifiable | Confirmed as intentional by design; already scoped out from test requirements |
+| 7 | CI enforcement mechanism | Script `.ci/check-spec-status.sh` defined for spec status-to-test correspondence |
 
 ## Notes
 

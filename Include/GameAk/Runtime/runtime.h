@@ -118,6 +118,33 @@ public:
     /// Returns an EventId that can be used to unlisten.
     EventId listen(EventType type, EventHandler handler);
 
+    // ── Conversation-style event wrappers ───────────────────────────
+    EventId on_tick_begin(EventHandler handler) {
+        return listen(EventType::TickBegin, std::move(handler));
+    }
+
+    EventId on_tick_end(EventHandler handler) {
+        return listen(EventType::TickEnd, std::move(handler));
+    }
+
+    EventId on_block_created(EventHandler handler) {
+        return listen(EventType::BlockCreated, std::move(handler));
+    }
+
+    EventId on_block_destroyed(EventHandler handler) {
+        return listen(EventType::BlockDestroyed, std::move(handler));
+    }
+
+    // ── Conversation-style query wrappers ───────────────────────────
+    std::vector<core::Identity> blocks_of_type(uint32_t type_id) const {
+        return find_blocks_by_type(type_id);
+    }
+
+    std::vector<core::Identity> blocks_where(
+        std::function<bool(const DataBlock&)> pred) const {
+        return find_blocks(std::move(pred));
+    }
+
     /// Remove a previously registered event handler.
     void unlisten(EventId id);
 
@@ -308,6 +335,25 @@ core::Result<void> Runtime<S>::register_block_type(BlockTypeDescriptor descripto
     if (this->types_.contains(descriptor.type_id)) {
         return core::Error{core::ErrorCode::DuplicateRegistration, "Block type already registered"};
     }
+
+    if (descriptor.semantic) {
+        if (descriptor.size == 0) {
+            if (!descriptor.semantic->valid()) {
+                return core::Error{core::ErrorCode::InvalidOperation,
+                                   "Semantic constraint present but invalid"};
+            }
+            size_t inferred = core::bytes_for(*descriptor.semantic);
+            if (inferred == 0) {
+                return core::Error{core::ErrorCode::InvalidOperation,
+                                   "Semantic constraint present but could not infer size"};
+            }
+            descriptor.size = inferred;
+            if (descriptor.alignment == 0) {
+                descriptor.alignment = inferred;
+            }
+        }
+    }
+
     this->types_[descriptor.type_id] = descriptor;
     SPDLOG_DEBUG("Registered block type: id={}, name={}, size={}",
                  descriptor.type_id, descriptor.name, descriptor.size);

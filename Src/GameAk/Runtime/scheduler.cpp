@@ -1,26 +1,10 @@
 #include "GameAk/Runtime/fifo_scheduler.h"
-#include "GameAk/Runtime/scheduler_ops.h"
 #include <utility>
 
 namespace gameak::runtime {
 
 void FifoScheduler::enqueue_impl(Command command) {
     queue_.push(std::move(command));
-}
-
-core::Result<void> FifoScheduler::validate(
-    const Command& command,
-    const std::unordered_map<core::Identity, DataBlock>& blocks,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types) {
-    return detail::validate_command(command, blocks, types);
-}
-
-core::Result<void> FifoScheduler::execute(
-    Command& command,
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
-    uint64_t& next_identity) {
-    return detail::execute_command(command, blocks, types, next_identity);
 }
 
 core::Result<void> FifoScheduler::process_pending_impl(
@@ -31,28 +15,9 @@ core::Result<void> FifoScheduler::process_pending_impl(
     while (!queue_.empty()) {
         auto command = std::move(queue_.front());
         queue_.pop();
-
-        if (cancelled_.contains(command.id())) {
-            cancelled_.erase(command.id());
-            skipped_++;
-            continue;
-        }
-
-        auto validation = validate(command, blocks, types);
-        if (!validation) {
-            rejected_++;
-            rejected_details_.push_back({command.id(), validation.error()});
-            continue;
-        }
-
-        auto execution = execute(command, blocks, types, next_identity);
-        if (!execution) {
-            rejected_++;
-            rejected_details_.push_back({command.id(), execution.error()});
-        } else {
-            history_.push_back(command);
-            executed_++;
-        }
+        process_command(command, blocks, types, next_identity,
+                        cancelled_, rejected_details_, history_,
+                        executed_, rejected_, skipped_);
     }
     return {};
 }

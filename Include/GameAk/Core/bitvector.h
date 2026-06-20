@@ -2,6 +2,7 @@
 
 #include "flat_vector.h"
 
+#include <bit>
 #include <cstddef>
 #include <cstdint>
 
@@ -78,7 +79,7 @@ public:
 
     size_t count() const {
         size_t c = 0;
-        for (auto w : words_) c += __builtin_popcountll(w);
+        for (auto w : words_) c += static_cast<size_t>(std::popcount(w));
         return c;
     }
 

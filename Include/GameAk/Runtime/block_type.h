@@ -10,17 +10,23 @@
 namespace gameak::runtime {
 
 struct FieldDescriptor {
-    const char* name;
+    std::string name;
     size_t offset;
     size_t size;
     size_t alignment;
+
+    FieldDescriptor() = default;
+    FieldDescriptor(const char* n, size_t o, size_t s, size_t a)
+        : name{n}, offset{o}, size{s}, alignment{a} {}
+    FieldDescriptor(std::string n, size_t o, size_t s, size_t a)
+        : name{std::move(n)}, offset{o}, size{s}, alignment{a} {}
 };
 
 struct BlockTypeDescriptor {
     uint32_t type_id;
     size_t size;
     size_t alignment;
-    const char* name;
+    std::string name;
     LayoutStrategy layout{LayoutStrategy::AoS};
     AoSoAConfig aosoa_config{};
     std::vector<FieldDescriptor> fields;

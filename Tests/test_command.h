@@ -69,12 +69,11 @@ describe("Commands", {
         auto result = rt.tick();
         expect(result.status == ExecutionStatus::Success).toBeTruthy();
 
-        auto& blocks = rt.blocks();
-        auto it = blocks.find(block.value());
-        expect(it != blocks.end()).toBeTruthy();
+        auto* bp = rt.get_block(block.value());
+        expect(bp != nullptr).toBeTruthy();
 
         int stored;
-        std::memcpy(&stored, it->second.data(), sizeof(int));
+        std::memcpy(&stored, bp->data(), sizeof(int));
         expect(stored).toEqual(42);
     });
 
@@ -118,7 +117,7 @@ describe("Commands", {
             Command{CommandResizeBlock{{block.value()}, sizeof(int) * 2}});
         expect(resize.has_value()).toBeTruthy();
         rt.tick();
-        expect(rt.blocks().at(block.value()).size() == sizeof(int) * 2).toBeTruthy();
+        expect(rt.get_block(block.value())->size() == sizeof(int) * 2).toBeTruthy();
 
         int value = 99;
         auto bytes = std::vector<std::byte>(
@@ -134,7 +133,7 @@ describe("Commands", {
 
         int stored;
         std::memcpy(&stored,
-                    static_cast<const std::byte*>(rt.blocks().at(block.value()).data()) + sizeof(int),
+                    static_cast<const std::byte*>(rt.get_block(block.value())->data()) + sizeof(int),
                     sizeof(int));
         expect(stored).toEqual(99);
     });

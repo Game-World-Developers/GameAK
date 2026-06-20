@@ -38,14 +38,6 @@ private:
     const std::vector<Command>& history_impl() const { return history_; }
     void clear_history_impl() { history_.clear(); }
 
-    core::Result<void> validate(const Command& command,
-                                const std::unordered_map<core::Identity, DataBlock>& blocks,
-                                const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
-    core::Result<void> execute(Command& command,
-                               std::unordered_map<core::Identity, DataBlock>& blocks,
-                               const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
-                               uint64_t& next_identity);
-
     std::queue<Command> queue_;
     std::unordered_set<CommandId> cancelled_;
     std::vector<RejectedCommand> rejected_details_;

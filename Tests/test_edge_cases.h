@@ -303,7 +303,7 @@ namespace edge_helpers {
         expect(rt.register_block_type(desc).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
 
-        DefaultRuntime::Snapshot empty;
+        Snapshot empty;
         rt.load(empty);
         expect(rt.block_count(1) == 0).toBeTruthy();
     }
@@ -386,7 +386,7 @@ namespace edge_helpers {
 
     void test_fsm_single_state() {
         int entry_b = 0;
-        auto fsm = FsmBuilder{}
+        auto fsm = Fsm<>{}
             .initial_state("A")
             .add_state("A")
             .add_state("B")
@@ -406,7 +406,7 @@ namespace edge_helpers {
     }
 
     void test_fsm_transition_to_self() {
-        auto fsm = FsmBuilder{}
+        auto fsm = Fsm<>{}
             .initial_state("A")
             .add_state("A")
             .add_transition("A", "self", "A")

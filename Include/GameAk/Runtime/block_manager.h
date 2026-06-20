@@ -1,0 +1,169 @@
+#pragma once
+
+#include "block_type.h"
+#include "data_block.h"
+#include "GameAk/Core/identity.h"
+#include "GameAk/Core/result.h"
+
+#include <cstdint>
+#include <functional>
+#include <unordered_map>
+#include <vector>
+
+namespace gameak::runtime {
+
+class BlockManager {
+public:
+    BlockManager() = default;
+
+    core::Result<core::Identity> create(
+        uint32_t type_id,
+        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        uint64_t& next_identity);
+
+    core::Result<void> destroy(core::Identity identity);
+
+    core::Result<core::Identity> create_ephemeral(
+        uint32_t type_id,
+        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        uint64_t& next_identity);
+
+    void destroy_all_ephemeral(
+        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+
+    bool has(core::Identity identity) const { return blocks_.contains(identity); }
+    size_t count(uint32_t type_id) const {
+        auto it = type_counts_.find(type_id);
+        return it != type_counts_.end() ? it->second : 0;
+    }
+    size_t total_block_count() const { return blocks_.size(); }
+
+    const DataBlock* get_block(core::Identity identity) const {
+        auto it = blocks_.find(identity);
+        return it != blocks_.end() ? &it->second : nullptr;
+    }
+
+    std::vector<core::Identity> find_by_type(uint32_t type_id) const;
+    std::vector<core::Identity> find(
+        std::function<bool(const DataBlock&)> pred) const;
+
+    void rebuild_counts();
+
+    // Internal: exposed for save/load and layout conversion
+    const std::unordered_map<core::Identity, DataBlock>& ref_blocks() const { return blocks_; }
+    std::unordered_map<core::Identity, DataBlock>& mut_blocks() { return blocks_; }
+    void set_blocks(std::unordered_map<core::Identity, DataBlock> blocks) {
+        blocks_ = std::move(blocks);
+        rebuild_counts();
+    }
+
+private:
+    std::unordered_map<core::Identity, DataBlock> blocks_;
+    std::unordered_map<uint32_t, size_t> type_counts_;
+};
+
+// ── Inline implementation ──────────────────────────────────────────
+
+inline core::Result<core::Identity> BlockManager::create(
+    uint32_t type_id,
+    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    uint64_t& next_identity)
+{
+    auto it = types.find(type_id);
+    if (it == types.end()) {
+        return core::Error{core::ErrorCode::TypeNotRegistered, "Block type not registered"};
+    }
+    auto& desc = it->second;
+    core::Identity id{++next_identity};
+    blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    type_counts_[type_id]++;
+    return id;
+}
+
+inline core::Result<void> BlockManager::destroy(core::Identity identity) {
+    if (!identity.is_valid()) {
+        return core::Error{core::ErrorCode::InvalidIdentity, "Identity is invalid"};
+    }
+    auto it = blocks_.find(identity);
+    if (it == blocks_.end()) {
+        return core::Error{core::ErrorCode::BlockNotFound, "Block not found"};
+    }
+    uint32_t type_id = it->second.type_id();
+    blocks_.erase(it);
+    auto tc = type_counts_.find(type_id);
+    if (tc != type_counts_.end() && tc->second > 0) {
+        tc->second--;
+    }
+    return {};
+}
+
+inline core::Result<core::Identity> BlockManager::create_ephemeral(
+    uint32_t type_id,
+    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    uint64_t& next_identity)
+{
+    auto it = types.find(type_id);
+    if (it == types.end()) {
+        return core::Error{core::ErrorCode::TypeNotRegistered, "Block type not registered"};
+    }
+    if (!it->second.ephemeral) {
+        return core::Error{core::ErrorCode::InvalidOperation,
+                           "Cannot create ephemeral block for non-ephemeral type"};
+    }
+    auto& desc = it->second;
+    core::Identity id{++next_identity};
+    blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    type_counts_[type_id]++;
+    return id;
+}
+
+inline void BlockManager::destroy_all_ephemeral(
+    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+{
+    std::vector<core::Identity> to_destroy;
+    for (auto& [id, block] : blocks_) {
+        auto tit = types.find(block.type_id());
+        if (tit != types.end() && tit->second.ephemeral) {
+            to_destroy.push_back(id);
+        }
+    }
+    for (auto& id : to_destroy) {
+        auto bit = blocks_.find(id);
+        if (bit != blocks_.end()) {
+            uint32_t type_id = bit->second.type_id();
+            blocks_.erase(bit);
+            auto tc = type_counts_.find(type_id);
+            if (tc != type_counts_.end() && tc->second > 0) {
+                tc->second--;
+            }
+        }
+    }
+}
+
+inline std::vector<core::Identity> BlockManager::find_by_type(uint32_t type_id) const {
+    return find([type_id](const DataBlock& block) {
+        return block.type_id() == type_id;
+    });
+}
+
+inline std::vector<core::Identity> BlockManager::find(
+    std::function<bool(const DataBlock&)> pred) const
+{
+    std::vector<core::Identity> result;
+    for (const auto& [id, block] : blocks_) {
+        if (pred(block)) {
+            result.push_back(id);
+        }
+    }
+    return result;
+}
+
+inline void BlockManager::rebuild_counts() {
+    type_counts_.clear();
+    for (const auto& [id, block] : blocks_) {
+        (void)id;
+        type_counts_[block.type_id()]++;
+    }
+}
+
+} // namespace gameak::runtime

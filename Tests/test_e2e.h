@@ -30,13 +30,13 @@ describe("E2E", {
         expect(player_id.has_value() && enemy_id.has_value()).toBeTruthy();
 
         // Combat FSM: player idle/attacking states
-        FsmBuilder fsm_builder;
-        fsm_builder.initial_state("idle")
+        auto combat_fsm = Fsm<>{}
+            .initial_state("idle")
             .add_state("idle")
             .add_state("attacking")
             .add_transition("idle", "start_attack", "attacking")
-            .add_transition("attacking", "end_attack", "idle");
-        auto combat_fsm = fsm_builder.build();
+            .add_transition("attacking", "end_attack", "idle")
+            .build();
         expect(rt.register_controller(std::move(combat_fsm), 10).has_value()).toBeTruthy();
 
         // Event loop for damage processing

@@ -66,6 +66,7 @@ public:
 
     CommandType type() const;
     const CommandPayload& payload() const { return payload_; }
+    CommandPayload& payload() { return payload_; }
     CommandId id() const { return id_; }
 
     // ── Conversation-style factories ────────────────────────────────

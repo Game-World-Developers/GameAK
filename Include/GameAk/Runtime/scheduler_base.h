@@ -2,11 +2,13 @@
 
 #include "command.h"
 #include "data_block.h"
+#include "command_dispatcher.h"
 #include "GameAk/Core/error.h"
 #include "GameAk/Core/identity.h"
 
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace gameak::runtime {
@@ -45,6 +47,44 @@ public:
 
 protected:
     ~SchedulerBase() = default;
+
+    /// Shared per-command processing logic (validate → execute → track results).
+    /// Returns false if the command was cancelled and should be skipped.
+    bool process_command(
+        Command& command,
+        std::unordered_map<core::Identity, DataBlock>& blocks,
+        std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        uint64_t& next_identity,
+        std::unordered_set<CommandId>& cancelled,
+        std::vector<RejectedCommand>& rejected_details,
+        std::vector<Command>& history,
+        size_t& executed,
+        size_t& rejected,
+        size_t& skipped)
+    {
+        if (cancelled.contains(command.id())) {
+            cancelled.erase(command.id());
+            skipped++;
+            return false;
+        }
+
+        auto validation = detail::validate_command(command, blocks, types);
+        if (!validation) {
+            rejected++;
+            rejected_details.push_back({command.id(), validation.error()});
+            return false;
+        }
+
+        auto execution = detail::execute_command(command, blocks, types, next_identity);
+        if (!execution) {
+            rejected++;
+            rejected_details.push_back({command.id(), execution.error()});
+        } else {
+            history.push_back(command);
+            executed++;
+        }
+        return true;
+    }
 
 private:
     Derived& derived() { return static_cast<Derived&>(*this); }

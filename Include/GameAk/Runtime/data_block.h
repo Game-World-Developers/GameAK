@@ -4,6 +4,7 @@
 #include "GameAk/Core/identity.h"
 
 #include <cstddef>
+#include <span>
 #include <vector>
 
 namespace gameak::runtime {
@@ -19,6 +20,19 @@ public:
 
     void* data() { return data_.data(); }
     const void* data() const { return data_.data(); }
+
+    template <typename T>
+    T& field(size_t offset) {
+        return *reinterpret_cast<T*>(data_.data() + offset);
+    }
+
+    template <typename T>
+    const T& field(size_t offset) const {
+        return *reinterpret_cast<const T*>(data_.data() + offset);
+    }
+
+    std::span<std::byte> as_span() { return data_; }
+    std::span<const std::byte> as_span() const { return data_; }
 
     void resize(size_t new_size) { data_.resize(new_size); }
 

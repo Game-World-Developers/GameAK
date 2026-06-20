@@ -1,6 +1,7 @@
 // GameAK headers first (pull in standard library headers)
 #include "GameAk/Core/identity.h"
 #include "GameAk/Core/platform.h"
+#include "GameAk/Core/platform_crtp.h"
 #include "GameAk/Core/simd.h"
 #include "GameAk/Core/result.h"
 #include "GameAk/Core/error.h"
@@ -11,6 +12,7 @@
 #include "GameAk/Core/bitset.h"
 #include "GameAk/Core/bitvector.h"
 #include "GameAk/Core/bitflags.h"
+#include "GameAk/Core/dynamic_bitflags.h"
 #include "GameAk/Core/bit_packing.h"
 #include "GameAk/Runtime/fsm.h"
 #include "GameAk/Runtime/rule_system.h"
@@ -53,6 +55,13 @@
 #include "test_e2e.h"
 #include "test_semantic.h"
 #include "test_edge_cases.h"
+#include "test_result.h"
+#include "test_dsl_block_type.h"
+#include "test_dsl_queries.h"
+#include "test_dsl_config.h"
+#include "test_dsl_relationships.h"
+#include "test_dsl_callbacks.h"
+#include "test_platform_crtp.h"
 
 using namespace gameak::core;
 using namespace gameak::runtime;
@@ -933,5 +942,12 @@ int main(int argc, char* argv[]) {
     run_e2e_tests();
     run_edge_case_tests();
     run_semantic_tests();
+    run_result_monadic_tests();
+    run_dsl_block_type_tests();
+    run_dsl_query_tests();
+    run_dsl_config_tests();
+    run_dsl_relationship_tests();
+    run_dsl_callback_tests();
+    run_platform_crtp_tests();
     return cest_result();
 }

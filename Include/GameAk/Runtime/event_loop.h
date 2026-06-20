@@ -61,8 +61,7 @@ public:
         auto handlers = std::make_shared<HandlerMap>(handlers_);
         auto queue = queue_;
 
-        return [handlers, queue](StateView& view, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {
-            (void)view;
+        return [handlers, queue](StateView&, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {
 
             while (!queue->empty()) {
                 auto event = std::move(queue->front());

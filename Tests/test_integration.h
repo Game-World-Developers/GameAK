@@ -41,12 +41,12 @@ describe("Integration", {
         });
         auto rules_ctrl = rules.build();
 
-        FsmBuilder builder;
-        builder.initial_state("idle")
+        auto fsm_ctrl = Fsm<>{}
+            .initial_state("idle")
             .add_state("idle")
             .add_state("attacking")
-            .add_transition("idle", "tick", "attacking");
-        auto fsm_ctrl = builder.build();
+            .add_transition("idle", "tick", "attacking")
+            .build();
 
         expect(rt.register_controller(std::move(pipe_ctrl), 10).has_value()).toBeTruthy();
         expect(rt.register_controller(std::move(loop_ctrl), 0).has_value()).toBeTruthy();

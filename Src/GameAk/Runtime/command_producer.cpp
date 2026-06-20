@@ -1,6 +1,4 @@
-#include "GameAk/Runtime/controller.h"
-#include "GameAk/Runtime/data_block.h"
-#include "GameAk/Runtime/block_type.h"
+#include "GameAk/Runtime/command_producer.h"
 
 namespace gameak::runtime {
 

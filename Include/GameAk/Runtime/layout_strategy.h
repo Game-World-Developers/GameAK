@@ -4,6 +4,8 @@
 
 namespace gameak::runtime {
 
+inline constexpr uint32_t kDefaultChunkSize = 8;
+
 enum class LayoutStrategy : uint32_t {
     AoS,
     SoA,
@@ -11,7 +13,7 @@ enum class LayoutStrategy : uint32_t {
 };
 
 struct AoSoAConfig {
-    uint32_t chunk_size{8};
+    uint32_t chunk_size{kDefaultChunkSize};
 };
 
 inline const char* layout_strategy_name(LayoutStrategy s) {

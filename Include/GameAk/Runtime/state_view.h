@@ -4,27 +4,27 @@
 #include "data_block.h"
 #include "layout_manager.h"
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/rb_tree.h"
 #include "GameAk/Core/result.h"
 
 #include <cstddef>
 #include <cstdint>
-#include <unordered_map>
 
 namespace gameak::runtime {
 
 class StateView {
 public:
     // Original constructor (AoS-only field access via get_block)
-    explicit StateView(const std::unordered_map<core::Identity, DataBlock>& blocks,
-                       const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    explicit StateView(const core::rb_tree<core::Identity, DataBlock>& blocks,
+                       const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
                        float time_delta = 0.016f)
         : blocks_{blocks}, types_{types}, time_delta_{time_delta} {}
 
     // Layout-aware constructor (enables field<> across AoS/SoA/AoSoA)
-    explicit StateView(const std::unordered_map<core::Identity, DataBlock>& blocks,
-                       const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    explicit StateView(const core::rb_tree<core::Identity, DataBlock>& blocks,
+                       const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
                        const LayoutManager& layout_mgr,
-                       const std::unordered_map<core::Identity, uint32_t>& identity_types,
+                       const core::rb_tree<core::Identity, uint32_t>& identity_types,
                        float time_delta = 0.016f)
         : blocks_{blocks}, types_{types}, layout_mgr_{&layout_mgr},
           identity_types_{&identity_types}, time_delta_{time_delta} {}
@@ -124,10 +124,10 @@ public:
     }
 
 private:
-    const std::unordered_map<core::Identity, DataBlock>& blocks_;
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types_;
+    const core::rb_tree<core::Identity, DataBlock>& blocks_;
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types_;
     const LayoutManager* layout_mgr_{nullptr};
-    const std::unordered_map<core::Identity, uint32_t>* identity_types_{nullptr};
+    const core::rb_tree<core::Identity, uint32_t>* identity_types_{nullptr};
     float time_delta_{0.016f};
 };
 

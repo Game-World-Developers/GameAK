@@ -23,7 +23,7 @@ void test_random_command_sequence() {
     DefaultRuntime rt;
     BlockTypeDescriptor desc;
     desc.type_id = 1; desc.size = sizeof(int) * 4; desc.alignment = alignof(int); desc.name = "test";
-    auto _r = rt.register_block_type(desc); (void)_r;
+    auto _r = rt.register_block_type(std::move(desc)); (void)_r;
 
     PRNG rng{42};
     constexpr int OPS = 1000;
@@ -68,7 +68,7 @@ void test_fuzzy_invalid_commands_interleaved() {
     DefaultRuntime rt;
     BlockTypeDescriptor desc;
     desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-    expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+    expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
     PRNG rng{123};
     constexpr int OPS = 500;
@@ -98,7 +98,7 @@ void test_bulk_create_destroy_alternating() {
     DefaultRuntime rt;
     BlockTypeDescriptor desc;
     desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-    expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+    expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
     PRNG rng{456};
     constexpr int OPS = 2000;
@@ -130,7 +130,7 @@ void test_random_layout_alternation() {
     BlockTypeDescriptor desc;
     desc.type_id = 1; desc.size = sizeof(int) * 4; desc.alignment = alignof(int);
     desc.name = "test"; desc.layout = LayoutStrategy::AoS;
-    expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+    expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
     for (int i = 0; i < 50; ++i) {
         auto id = rt.create_block(1);
@@ -138,7 +138,7 @@ void test_random_layout_alternation() {
     }
 
     PRNG rng{789};
-    std::vector<Identity> last_ids;
+    flat_vector<Identity, 4> last_ids;
 
     for (int i = 0; i < 50; ++i) {
         if (rng.range(2) == 0) {
@@ -164,8 +164,10 @@ void test_deterministic_replay() {
     DefaultRuntime rt2;
     BlockTypeDescriptor desc;
     desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-    expect(rt1.register_block_type(desc).has_value()).toBeTruthy();
-    expect(rt2.register_block_type(desc).has_value()).toBeTruthy();
+    expect(rt1.register_block_type(std::move(desc)).has_value()).toBeTruthy();
+    BlockTypeDescriptor desc2;
+    desc2.type_id = 1; desc2.size = sizeof(int); desc2.alignment = alignof(int); desc2.name = "test";
+    expect(rt2.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
     PRNG rng{999};
     constexpr int OPS = 200;

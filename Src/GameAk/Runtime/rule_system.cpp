@@ -35,7 +35,7 @@ size_t RuleSystem::rule_count() const {
 }
 
 Controller RuleSystem::build() {
-    auto rules = std::make_shared<std::vector<RuleEntry>>(rules_);
+    auto rules = std::make_shared<core::flat_vector<RuleEntry, 8>>(rules_);
 
     return [rules](StateView& view, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {
         // Sort by priority descending (stable sort preserves registration order for equal priorities)

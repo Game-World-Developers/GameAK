@@ -13,17 +13,17 @@ describe("E2E", {
         BlockTypeDescriptor player;
         player.type_id = 1; player.size = sizeof(int) * 4; player.alignment = alignof(int);
         player.name = "player";
-        expect(rt.register_block_type(player).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(player)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor enemy;
         enemy.type_id = 2; enemy.size = sizeof(int) * 4; enemy.alignment = alignof(int);
         enemy.name = "enemy";
-        expect(rt.register_block_type(enemy).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(enemy)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor damage_signal;
         damage_signal.type_id = 3; damage_signal.size = sizeof(int); damage_signal.alignment = alignof(int);
         damage_signal.name = "damage_signal"; damage_signal.ephemeral = true;
-        expect(rt.register_block_type(damage_signal).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(damage_signal)).has_value()).toBeTruthy();
 
         auto player_id = rt.create_block(1);
         auto enemy_id = rt.create_block(2);
@@ -81,7 +81,7 @@ describe("E2E", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int ctrl_count = 0;
         auto ctrl = [&](StateView&, CommandProducer& prod, EphemeralProducer&) -> Result<void> {
@@ -101,7 +101,9 @@ describe("E2E", {
         int blocks_after_10 = static_cast<int>(rt.block_count(1));
 
         DefaultRuntime rt2;
-        expect(rt2.register_block_type(desc).has_value()).toBeTruthy();
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 1; desc2.size = sizeof(int); desc2.alignment = alignof(int); desc2.name = "test";
+        expect(rt2.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
         int ctrl2_count = 0;
         auto ctrl2 = [&](StateView&, CommandProducer& prod, EphemeralProducer&) -> Result<void> {
             ctrl2_count++;
@@ -111,7 +113,7 @@ describe("E2E", {
         };
         expect(rt2.register_controller(std::move(ctrl2)).has_value()).toBeTruthy();
 
-        rt2.load(snap);
+        rt2.load(std::move(snap));
         expect(rt2.block_count(1) == static_cast<size_t>(blocks_after_5)).toBeTruthy();
 
         for (int i = 0; i < 5; ++i) rt2.tick(0.016f);
@@ -123,7 +125,7 @@ describe("E2E", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int good_count = 0;
 
@@ -163,7 +165,7 @@ describe("E2E", {
 
         desc.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"y", sizeof(int), sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.create_block(1);
         auto id2 = rt.create_block(1);

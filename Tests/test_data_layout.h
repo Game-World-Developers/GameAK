@@ -14,7 +14,7 @@ namespace data_layout_helpers {
         desc.alignment = alignof(int);
         desc.name = "test";
         expect(desc.layout == LayoutStrategy::AoS).toBeTruthy();
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         expect(rt.get_layout(1) == LayoutStrategy::AoS).toBeTruthy();
     }
 
@@ -26,7 +26,7 @@ namespace data_layout_helpers {
         desc_aos.alignment = alignof(int);
         desc_aos.name = "aos_type";
         desc_aos.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc_aos).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_aos)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor desc_soa;
         desc_soa.type_id = 2;
@@ -37,7 +37,7 @@ namespace data_layout_helpers {
         desc_soa.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc_soa.fields.push_back({"y", sizeof(int), sizeof(int), alignof(int)});
         desc_soa.fields.push_back({"z", sizeof(int) * 2, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc_soa).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_soa)).has_value()).toBeTruthy();
 
         expect(rt.get_layout(1) == LayoutStrategy::AoS).toBeTruthy();
         expect(rt.get_layout(2) == LayoutStrategy::SoA).toBeTruthy();
@@ -51,7 +51,7 @@ namespace data_layout_helpers {
         desc.alignment = alignof(int);
         desc.name = "pos_vel_mass";
         desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         expect(b1.has_value()).toBeTruthy();
@@ -74,16 +74,13 @@ namespace data_layout_helpers {
         desc.layout = LayoutStrategy::SoA;
         desc.fields.push_back({"value", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"extra", sizeof(int), sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
 
         int val = 42;
-        auto bytes = std::vector<std::byte>(
-            reinterpret_cast<std::byte*>(&val),
-            reinterpret_cast<std::byte*>(&val) + sizeof(int));
-        auto cmd = rt.submit_command(Command{CommandSetField{{block.value()}, 0, bytes}});
+        auto cmd = rt.submit_command(Command::set_field(block.value(), 0, val));
         expect(cmd.has_value()).toBeTruthy();
         rt.tick();
 
@@ -105,7 +102,7 @@ namespace data_layout_helpers {
         desc.alignment = alignof(int);
         desc.name = "test";
         desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(1);
@@ -130,7 +127,7 @@ namespace data_layout_helpers {
         desc_aos.alignment = alignof(int);
         desc_aos.name = "aos_type";
         desc_aos.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc_aos).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_aos)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor desc_soa;
         desc_soa.type_id = 2;
@@ -141,7 +138,7 @@ namespace data_layout_helpers {
         desc_soa.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc_soa.fields.push_back({"y", sizeof(int), sizeof(int), alignof(int)});
         desc_soa.fields.push_back({"z", sizeof(int) * 2, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc_soa).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_soa)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -162,7 +159,7 @@ namespace data_layout_helpers {
         desc.alignment = alignof(int);
         desc.name = "test";
         desc.layout = LayoutStrategy::AoSoA;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         // Default chunk_size is 8
         expect(desc.aosoa_config.chunk_size == 8).toBeTruthy();
     }
@@ -176,7 +173,7 @@ namespace data_layout_helpers {
         desc.name = "test";
         desc.layout = LayoutStrategy::AoS;
         desc.aosoa_config.chunk_size = 4;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Create 6 blocks — they should fill 2 chunks (4 + 2)
         for (int i = 0; i < 6; ++i) {
@@ -197,7 +194,7 @@ namespace data_layout_helpers {
         desc.alignment = alignof(int);
         desc.name = "test";
         desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(1);
@@ -228,7 +225,7 @@ namespace data_layout_helpers {
         desc.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"y", sizeof(int), sizeof(int), alignof(int)});
         desc.fields.push_back({"z", sizeof(int) * 2, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Create 3 blocks with known values
         auto id0 = rt.create_block(1).value();
@@ -237,10 +234,7 @@ namespace data_layout_helpers {
 
         // Write values via SetField
         auto write_int = [&](auto id, size_t offset, int val) {
-            auto bytes = std::vector<std::byte>(
-                reinterpret_cast<std::byte*>(&val),
-                reinterpret_cast<std::byte*>(&val) + sizeof(int));
-            auto _ = rt.submit_command(Command{CommandSetField{{id}, offset, bytes}});
+            auto _ = rt.submit_command(Command::set_field(id, offset, val));
             (void)_;
         };
         write_int(id0, 0, 10);   write_int(id0, 4, 20);   write_int(id0, 8, 30);
@@ -284,7 +278,7 @@ namespace data_layout_helpers {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.convert_to_aosoa(1);
         expect(rt.get_layout(1) == LayoutStrategy::AoSoA).toBeTruthy();
@@ -299,7 +293,7 @@ namespace data_layout_helpers {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.convert_from_aosoa(1);
         expect(rt.get_layout(1) == LayoutStrategy::AoS).toBeTruthy();
@@ -314,7 +308,7 @@ namespace data_layout_helpers {
         desc.name = "pair";
         desc.layout = LayoutStrategy::AoS;
         desc.aosoa_config.chunk_size = 3;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -337,7 +331,7 @@ namespace data_layout_helpers {
         desc_aos.size = sizeof(int);
         desc_aos.alignment = alignof(int);
         desc_aos.name = "aos_type";
-        expect(rt.register_block_type(desc_aos).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_aos)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor desc_aosoa;
         desc_aosoa.type_id = 2;
@@ -345,7 +339,7 @@ namespace data_layout_helpers {
         desc_aosoa.alignment = alignof(float);
         desc_aosoa.name = "aosoa_type";
         desc_aosoa.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc_aosoa).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_aosoa)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -370,7 +364,7 @@ namespace data_layout_helpers {
         desc.name = "test";
         desc.layout = LayoutStrategy::AoS;
         desc.aosoa_config.chunk_size = 4;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Create exactly chunk_size blocks
         for (int i = 0; i < 4; ++i) {
@@ -395,7 +389,7 @@ namespace data_layout_helpers {
         desc.name = "test";
         desc.layout = LayoutStrategy::AoS;
         desc.aosoa_config.chunk_size = 100;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Create 50 blocks, all in one chunk
         for (int i = 0; i < 50; ++i) {
@@ -418,7 +412,7 @@ namespace data_layout_helpers {
         desc.alignment = alignof(int);
         desc.name = "test";
         desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
 

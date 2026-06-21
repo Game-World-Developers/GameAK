@@ -25,12 +25,12 @@ size_t Pipeline::stage_count() const {
     return stages_.size();
 }
 
-std::vector<StageResult> Pipeline::last_results() const {
+core::flat_vector<StageResult, 8> Pipeline::last_results() const {
     return *results_ptr_;
 }
 
 Controller Pipeline::build() {
-    auto stages = std::make_shared<std::vector<Stage>>(stages_);
+    auto stages = std::make_shared<core::flat_vector<Stage, 8>>(stages_);
     auto results = results_ptr_;
 
     return [stages, results](StateView& view, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {

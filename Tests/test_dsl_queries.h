@@ -10,7 +10,7 @@ describe("DSL - Fluent Queries", {
         {
             BlockTypeDescriptor desc;
             desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "Player";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         }
         for (int i = 0; i < 5; i++)
             expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -24,7 +24,7 @@ describe("DSL - Fluent Queries", {
         {
             BlockTypeDescriptor desc;
             desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "t1";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         }
         for (int i = 0; i < 3; i++)
             expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -38,7 +38,7 @@ describe("DSL - Fluent Queries", {
         {
             BlockTypeDescriptor desc;
             desc.type_id = 1; desc.size = 16; desc.alignment = alignof(int); desc.name = "Player";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         }
         // Create blocks with varying sizes by size_of field simulation
         auto id1 = rt.create_block(1); expect(id1.has_value()).toBeTruthy();
@@ -58,7 +58,7 @@ describe("DSL - Fluent Queries", {
         {
             BlockTypeDescriptor desc;
             desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "Player";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         }
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -75,7 +75,7 @@ describe("DSL - Fluent Queries", {
         {
             BlockTypeDescriptor desc;
             desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "Player";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         }
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -96,7 +96,7 @@ describe("DSL - Fluent Queries", {
         {
             BlockTypeDescriptor desc;
             desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "Player";
-            expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         }
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();
@@ -113,8 +113,8 @@ describe("DSL - Fluent Queries", {
             desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "t1";
             BlockTypeDescriptor desc2;
             desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "t2";
-            expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
-            expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc1)).has_value()).toBeTruthy();
+            expect(rt.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
         }
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(2).has_value()).toBeTruthy();

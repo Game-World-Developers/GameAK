@@ -9,8 +9,8 @@ class CreateBlockHandler : public ICommandHandler {
 
     core::Result<void> validate(
         const CommandPayload& payload,
-        const std::unordered_map<core::Identity, DataBlock>&,
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types) override
+        const core::rb_tree<core::Identity, DataBlock>&,
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>& types) override
     {
         const auto& p = std::get<CommandCreateBlock>(payload);
         if (!types.contains(p.type_id)) {
@@ -21,8 +21,8 @@ class CreateBlockHandler : public ICommandHandler {
 
     core::Result<void> execute(
         CommandPayload& payload,
-        std::unordered_map<core::Identity, DataBlock>& blocks,
-        std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        core::rb_tree<core::Identity, DataBlock>& blocks,
+        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity) override
     {
         auto& p = std::get<CommandCreateBlock>(payload);
@@ -32,7 +32,7 @@ class CreateBlockHandler : public ICommandHandler {
         }
         auto& desc = it->second;
         core::Identity id{++next_identity};
-        blocks.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+        blocks.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
         return {};
     }
 };

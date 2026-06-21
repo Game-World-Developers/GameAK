@@ -10,7 +10,7 @@ namespace rule_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "hp";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int fires = 0;
         RuleSystem rs;
@@ -100,7 +100,7 @@ namespace rule_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         RuleSystem rs;
         rs.add_rule("spawn",
@@ -154,7 +154,7 @@ namespace rule_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int fires = 0;
         auto action = [&](StateView&, CommandProducer& prod, EphemeralProducer&) {

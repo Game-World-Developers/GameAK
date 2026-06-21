@@ -108,7 +108,7 @@ namespace event_loop_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         EventLoop<int> el;
         el.on(1, [&](const int&, CommandProducer& producer, EphemeralProducer&) { auto _ = producer.produce(Command{CommandCreateBlock{1}}); (void)_; });

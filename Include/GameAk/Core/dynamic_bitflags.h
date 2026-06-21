@@ -1,14 +1,15 @@
 #pragma once
 
+#include "GameAk/Core/rb_tree.h"
+
 #include <cstdint>
 #include <string>
-#include <unordered_map>
 
 namespace gameak::core {
 
 class DynamicBitFlags {
     uint64_t bits_{0};
-    std::unordered_map<std::string, uint8_t> name_to_bit_;
+    core::rb_tree<std::string, uint8_t> name_to_bit_;
 
 public:
     DynamicBitFlags() = default;
@@ -16,7 +17,7 @@ public:
     uint8_t register_flag(const std::string& name) {
         uint8_t pos = static_cast<uint8_t>(name_to_bit_.size());
         if (pos >= 64) return 64;
-        name_to_bit_[name] = pos;
+        name_to_bit_.insert(name, pos);
         return pos;
     }
 

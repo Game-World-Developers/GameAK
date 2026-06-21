@@ -321,6 +321,12 @@ public:
 
     bool contains(const Key& key) const { return find(key) != end(); }
 
+    void clear() {
+        destroy(root_);
+        root_ = nullptr;
+        size_ = 0;
+    }
+
     size_t size() const { return size_; }
     bool empty() const { return size_ == 0; }
 

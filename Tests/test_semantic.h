@@ -154,11 +154,12 @@ describe("Runtime - Semantic Registration", {
         sc.min = 0;
         sc.max = 100;
 
-        desc.semantic = &sc;
-        auto r = rt.register_block_type(desc);
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        auto r = rt.register_block_type(std::move(desc));
         expect(r.has_value()).toBeTruthy();
-        expect(rt.block_types().at(1).size == 1).toBeTruthy();
-        expect(rt.block_types().at(1).alignment == 1).toBeTruthy();
+        expect(rt.block_types().find(1)->second.size == 1).toBeTruthy();
+        expect(rt.block_types().find(1)->second.alignment == 1).toBeTruthy();
     });
 
     it("semantic_registration_explicit_size", {
@@ -173,11 +174,12 @@ describe("Runtime - Semantic Registration", {
         sc.min = 0;
         sc.max = 100;
 
-        desc.semantic = &sc;
-        auto r = rt.register_block_type(desc);
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        auto r = rt.register_block_type(std::move(desc));
         expect(r.has_value()).toBeTruthy();
-        expect(rt.block_types().at(2).size == 8).toBeTruthy();
-        expect(rt.block_types().at(2).alignment == 8).toBeTruthy();
+        expect(rt.block_types().find(2)->second.size == 8).toBeTruthy();
+        expect(rt.block_types().find(2)->second.alignment == 8).toBeTruthy();
     });
 
     it("semantic_registration_no_semantic", {
@@ -188,10 +190,10 @@ describe("Runtime - Semantic Registration", {
         desc.size = 4;
         desc.alignment = 4;
 
-        auto r = rt.register_block_type(desc);
+        auto r = rt.register_block_type(std::move(desc));
         expect(r.has_value()).toBeTruthy();
-        expect(rt.block_types().at(3).size == 4).toBeTruthy();
-        expect(rt.block_types().at(3).alignment == 4).toBeTruthy();
+        expect(rt.block_types().find(3)->second.size == 4).toBeTruthy();
+        expect(rt.block_types().find(3)->second.alignment == 4).toBeTruthy();
     });
 
     it("semantic_registration_invalid_constraint", {
@@ -202,8 +204,9 @@ describe("Runtime - Semantic Registration", {
         desc.size = 0;
 
         SemanticConstraint sc;
-        desc.semantic = &sc;
-        auto r = rt.register_block_type(desc);
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        auto r = rt.register_block_type(std::move(desc));
         expect(r.has_value()).toBeFalsy();
         expect(r.error().code() == ErrorCode::InvalidOperation).toBeTruthy();
     });
@@ -215,9 +218,9 @@ describe("Runtime - Semantic Registration", {
         desc.name = "no_size_no_sc";
         desc.size = 0;
 
-        auto r = rt.register_block_type(desc);
+        auto r = rt.register_block_type(std::move(desc));
         expect(r.has_value()).toBeTruthy();
-        expect(rt.block_types().at(5).size == 0).toBeTruthy();
+        expect(rt.block_types().find(5)->second.size == 0).toBeTruthy();
     });
 
     it("semantic_registration_creates_blocks_with_inferred_size", {
@@ -231,12 +234,13 @@ describe("Runtime - Semantic Registration", {
         sc.min = 0;
         sc.max = 100;
 
-        desc.semantic = &sc;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(10);
         expect(block.has_value()).toBeTruthy();
-        expect(rt.block_types().at(10).size == 1).toBeTruthy();
+        expect(rt.block_types().find(10)->second.size == 1).toBeTruthy();
 
         const auto& dt = static_cast<const DefaultRuntime&>(rt);
         auto blocks = dt.find_blocks_by_type(10);
@@ -253,9 +257,10 @@ describe("Runtime - Semantic Registration", {
         SemanticConstraint sc;
         sc.is_bool = true;
 
-        desc.semantic = &sc;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-        expect(rt.block_types().at(11).size == 1).toBeTruthy();
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
+        expect(rt.block_types().find(11)->second.size == 1).toBeTruthy();
     });
 
     it("semantic_registration_enum_type", {
@@ -268,9 +273,10 @@ describe("Runtime - Semantic Registration", {
         SemanticConstraint sc;
         sc.enum_count = 4;
 
-        desc.semantic = &sc;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-        expect(rt.block_types().at(12).size == 1).toBeTruthy();
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
+        expect(rt.block_types().find(12)->second.size == 1).toBeTruthy();
     });
 
     it("semantic_registration_wide_range_uses_two_bytes", {
@@ -284,9 +290,10 @@ describe("Runtime - Semantic Registration", {
         sc.min = 0;
         sc.max = 10000;
 
-        desc.semantic = &sc;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
-        expect(rt.block_types().at(13).size == 2).toBeTruthy();
+        desc.semantic = sc;
+        desc.has_semantic = true;
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
+        expect(rt.block_types().find(13)->second.size == 2).toBeTruthy();
     });
 });
 }

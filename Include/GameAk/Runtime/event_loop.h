@@ -1,14 +1,13 @@
 #pragma once
 
 #include "controller.h"
+#include "GameAk/Core/flat_vector.h"
+#include "GameAk/Core/rb_tree.h"
 #include "GameAk/Core/result.h"
 
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <queue>
-#include <unordered_map>
-#include <vector>
 
 namespace gameak::runtime {
 
@@ -23,11 +22,16 @@ class EventLoop {
 public:
     using Handler = std::function<void(const EventData&, CommandProducer&, EphemeralProducer&)>;
 
-    EventLoop() : queue_(std::make_shared<std::queue<PendingEvent>>()) {}
+    EventLoop() : pending_(std::make_shared<core::flat_vector<PendingEvent, 4>>()) {}
 
     HandlerId on(EventTypeId type, Handler handler) {
         HandlerId id = next_id_++;
-        handlers_[type].emplace_back(id, std::move(handler));
+        auto it = handlers_.find(type);
+        if (it != handlers_.end()) {
+            it->second.emplace_back(id, std::move(handler));
+        } else {
+            handlers_.insert(type, {{id, std::move(handler)}});
+        }
         return id;
     }
 
@@ -50,23 +54,20 @@ public:
     }
 
     void enqueue(EventTypeId type, EventData data) {
-        queue_->push({type, std::move(data)});
+        pending_->push_back({type, std::move(data)});
     }
 
     size_t pending_count() const {
-        return queue_->size();
+        return pending_->size();
     }
 
     Controller build() {
-        auto handlers = std::make_shared<HandlerMap>(handlers_);
-        auto queue = queue_;
+        auto handlers = std::make_shared<HandlerMap>(std::move(handlers_));
+        auto pending = pending_;
 
-        return [handlers, queue](StateView&, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {
+        return [handlers, pending](StateView&, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {
 
-            while (!queue->empty()) {
-                auto event = std::move(queue->front());
-                queue->pop();
-
+            for (auto& event : *pending) {
                 auto it = handlers->find(event.type);
                 if (it == handlers->end()) continue;
 
@@ -75,6 +76,7 @@ public:
                     handler(event.data, producer, ephem);
                 }
             }
+            pending->clear();
 
             return {};
         };
@@ -86,10 +88,10 @@ private:
         EventData data;
     };
 
-    using HandlerMap = std::unordered_map<EventTypeId, std::vector<std::pair<HandlerId, Handler>>>;
+    using HandlerMap = core::rb_tree<EventTypeId, core::flat_vector<std::pair<HandlerId, Handler>, 4>>;
 
     HandlerMap handlers_;
-    std::shared_ptr<std::queue<PendingEvent>> queue_;
+    std::shared_ptr<core::flat_vector<PendingEvent, 4>> pending_;
     HandlerId next_id_{1};
 };
 

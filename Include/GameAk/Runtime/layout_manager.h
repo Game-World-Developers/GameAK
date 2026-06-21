@@ -3,61 +3,61 @@
 #include "block_type.h"
 #include "data_block.h"
 #include "layout_strategy.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/rb_tree.h"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <span>
-#include <unordered_map>
-#include <vector>
 
 namespace gameak::runtime {
 
 class LayoutManager {
 public:
     struct FieldArray {
-        std::vector<std::byte> data;
+        core::flat_vector<std::byte, 1> data;
         size_t field_size{0};
         size_t field_offset{0};
         size_t field_alignment{1};
     };
 
     struct SoAStorage {
-        std::vector<core::Identity> identities;
-        std::vector<FieldArray> fields;
-        std::unordered_map<core::Identity, size_t> identity_index;
+        core::flat_vector<core::Identity, 1> identities;
+        core::flat_vector<FieldArray, 4> fields;
+        core::rb_tree<core::Identity, size_t> identity_index;
     };
 
     struct AoSoAChunk {
-        std::vector<core::Identity> identities;
-        std::vector<FieldArray> fields;
-        std::unordered_map<core::Identity, size_t> identity_index;
+        core::flat_vector<core::Identity, 1> identities;
+        core::flat_vector<FieldArray, 4> fields;
+        core::rb_tree<core::Identity, size_t> identity_index;
     };
 
     struct AoSoAStorage {
         uint32_t chunk_size{kDefaultChunkSize};
-        std::vector<AoSoAChunk> chunks;
+        core::flat_vector<AoSoAChunk, 1> chunks;
     };
 
     // ── SoA ────────────────────────────────────────────────────────
     void convert_to_soa(uint32_t type_id,
-                        std::unordered_map<core::Identity, DataBlock>& blocks,
-                        std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+                        core::rb_tree<core::Identity, DataBlock>& blocks,
+                        core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
 
     void convert_from_soa(uint32_t type_id,
-                          std::unordered_map<core::Identity, DataBlock>& blocks,
-                          std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+                          core::rb_tree<core::Identity, DataBlock>& blocks,
+                          core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
 
     // ── AoSoA ──────────────────────────────────────────────────────
     void convert_to_aosoa(uint32_t type_id,
-                          std::unordered_map<core::Identity, DataBlock>& blocks,
-                          std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+                          core::rb_tree<core::Identity, DataBlock>& blocks,
+                          core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
 
     void convert_from_aosoa(uint32_t type_id,
-                            std::unordered_map<core::Identity, DataBlock>& blocks,
-                            std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+                            core::rb_tree<core::Identity, DataBlock>& blocks,
+                            core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
 
     // ── Queries ────────────────────────────────────────────────────
     bool has_storage(uint32_t type_id) const {
@@ -129,8 +129,8 @@ public:
         core::Identity identity,
         uint32_t type_id,
         size_t field_index,
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
-        const std::unordered_map<core::Identity, DataBlock>& blocks) const
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
+        const core::rb_tree<core::Identity, DataBlock>& blocks) const
     {
         // Check AoS first (blocks in the main map)
         auto bit = blocks.find(identity);
@@ -185,19 +185,19 @@ public:
 
 private:
     void ensure_soa_storage(uint32_t type_id,
-                            const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+                            const core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
     void ensure_aosoa_storage(uint32_t type_id,
-                              const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+                              const core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
 
-    std::unordered_map<uint32_t, SoAStorage> layout_storage_;
-    std::unordered_map<uint32_t, AoSoAStorage> layout_storage_aosoa_;
+    core::rb_tree<uint32_t, SoAStorage> layout_storage_;
+    core::rb_tree<uint32_t, AoSoAStorage> layout_storage_aosoa_;
 };
 
 // ── Implementation ──────────────────────────────────────────────────
 
 inline void LayoutManager::ensure_soa_storage(
     uint32_t type_id,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
     if (layout_storage_.contains(type_id)) return;
 
@@ -223,21 +223,25 @@ inline void LayoutManager::ensure_soa_storage(
         storage.fields.push_back(std::move(fa));
     }
 
-    layout_storage_[type_id] = std::move(storage);
+    layout_storage_.insert(type_id, std::move(storage));
 }
 
 inline void LayoutManager::convert_to_soa(
     uint32_t type_id,
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    core::rb_tree<core::Identity, DataBlock>& blocks,
+    core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
-    auto& desc = types[type_id];
+    auto tit = types.find(type_id);
+    if (tit == types.end()) return;
+    auto& desc = tit->second;
     if (desc.layout == LayoutStrategy::SoA) return;
 
     ensure_soa_storage(type_id, types);
-    auto& storage = layout_storage_[type_id];
+    auto sit = layout_storage_.find(type_id);
+    if (sit == layout_storage_.end()) return;
+    auto& storage = sit->second;
 
-    std::vector<std::pair<core::Identity, DataBlock>> existing;
+    core::flat_vector<std::pair<core::Identity, DataBlock>, 1> existing;
     for (auto& [id, block] : blocks) {
         if (block.type_id() == type_id) {
             existing.emplace_back(id, std::move(block));
@@ -252,7 +256,7 @@ inline void LayoutManager::convert_to_soa(
     for (size_t ei = 0; ei < existing.size(); ++ei) {
         auto& [id, block] = existing[ei];
         storage.identities.push_back(id);
-        storage.identity_index[id] = ei;
+        storage.identity_index.insert(id, ei);
         for (size_t fi = 0; fi < storage.fields.size(); ++fi) {
             auto& fa = storage.fields[fi];
             size_t old_pos  = fa.field_offset;
@@ -272,10 +276,12 @@ inline void LayoutManager::convert_to_soa(
 
 inline void LayoutManager::convert_from_soa(
     uint32_t type_id,
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    core::rb_tree<core::Identity, DataBlock>& blocks,
+    core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
-    auto& desc = types[type_id];
+    auto tit = types.find(type_id);
+    if (tit == types.end()) return;
+    auto& desc = tit->second;
     if (desc.layout != LayoutStrategy::SoA) return;
 
     auto it = layout_storage_.find(type_id);
@@ -295,7 +301,7 @@ inline void LayoutManager::convert_from_soa(
                             fa.data.data() + src_pos, copy_size);
             }
         }
-        blocks.emplace(id, std::move(block));
+        blocks.insert(id, std::move(block));
     }
 
     layout_storage_.erase(type_id);
@@ -304,7 +310,7 @@ inline void LayoutManager::convert_from_soa(
 
 inline void LayoutManager::ensure_aosoa_storage(
     uint32_t type_id,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
     if (layout_storage_aosoa_.contains(type_id)) return;
 
@@ -316,21 +322,25 @@ inline void LayoutManager::ensure_aosoa_storage(
     storage.chunk_size = desc.aosoa_config.chunk_size;
     if (storage.chunk_size == 0) storage.chunk_size = kDefaultChunkSize;
 
-    layout_storage_aosoa_[type_id] = std::move(storage);
+    layout_storage_aosoa_.insert(type_id, std::move(storage));
 }
 
 inline void LayoutManager::convert_to_aosoa(
     uint32_t type_id,
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    core::rb_tree<core::Identity, DataBlock>& blocks,
+    core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
-    auto& desc = types[type_id];
+    auto tit = types.find(type_id);
+    if (tit == types.end()) return;
+    auto& desc = tit->second;
     if (desc.layout == LayoutStrategy::AoSoA) return;
 
     ensure_aosoa_storage(type_id, types);
-    auto& storage = layout_storage_aosoa_[type_id];
+    auto ait = layout_storage_aosoa_.find(type_id);
+    if (ait == layout_storage_aosoa_.end()) return;
+    auto& storage = ait->second;
 
-    std::vector<std::pair<core::Identity, DataBlock>> existing;
+    core::flat_vector<std::pair<core::Identity, DataBlock>, 1> existing;
     for (auto& [id, block] : blocks) {
         if (block.type_id() == type_id) {
             existing.emplace_back(id, std::move(block));
@@ -375,7 +385,7 @@ inline void LayoutManager::convert_to_aosoa(
             auto& [id, block] = existing[i];
             size_t local_idx = i - base;
             chunk.identities.push_back(id);
-            chunk.identity_index[id] = local_idx;
+            chunk.identity_index.insert(id, local_idx);
             for (size_t fi = 0; fi < chunk.fields.size(); ++fi) {
                 auto& fa = chunk.fields[fi];
                 size_t copy_size = std::min(fa.field_size, block.size() - fa.field_offset);
@@ -394,10 +404,12 @@ inline void LayoutManager::convert_to_aosoa(
 
 inline void LayoutManager::convert_from_aosoa(
     uint32_t type_id,
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    core::rb_tree<core::Identity, DataBlock>& blocks,
+    core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
-    auto& desc = types[type_id];
+    auto tit = types.find(type_id);
+    if (tit == types.end()) return;
+    auto& desc = tit->second;
     if (desc.layout != LayoutStrategy::AoSoA) return;
 
     auto it = layout_storage_aosoa_.find(type_id);
@@ -418,7 +430,7 @@ inline void LayoutManager::convert_from_aosoa(
                                 fa.data.data() + src_pos, copy_size);
                 }
             }
-            blocks.emplace(id, std::move(block));
+            blocks.insert(id, std::move(block));
         }
     }
 

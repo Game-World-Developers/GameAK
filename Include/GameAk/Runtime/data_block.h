@@ -1,20 +1,20 @@
 #pragma once
 
 #include "block_type.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <vector>
 
 namespace gameak::runtime {
 
 class DataBlock {
 public:
     DataBlock(core::Identity identity, uint32_t type_id, size_t size, size_t /*alignment*/)
-        : identity_{identity}, type_id_{type_id}, data_(size, std::byte{0}) {}
+        : identity_{identity}, type_id_{type_id} { data_.resize(size); }
 
     core::Identity identity() const { return identity_; }
     uint32_t type_id() const { return type_id_; }
@@ -47,7 +47,7 @@ public:
 private:
     core::Identity identity_;
     uint32_t type_id_;
-    std::vector<std::byte> data_;
+    core::flat_vector<std::byte, 1> data_;
 };
 
 } // namespace gameak::runtime

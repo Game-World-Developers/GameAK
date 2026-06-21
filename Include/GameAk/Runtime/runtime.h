@@ -23,8 +23,7 @@
 #include <functional>
 #include <span>
 #include "GameAk/Core/logging.h"
-#include <unordered_map>
-#include <vector>
+#include "GameAk/Core/rb_tree.h"
 
 namespace gameak::runtime {
 
@@ -58,7 +57,7 @@ public:
     core::Result<void> cancel_command(CommandId id);
 
     core::Result<void> replay_command(const Command& command);
-    const std::vector<Command>& command_history() const { return scheduler_.history(); }
+    const core::flat_vector<Command, 1>& command_history() const { return scheduler_.history(); }
 
     TickResult tick(float time_delta = kDefaultTimeDelta);
 
@@ -78,10 +77,10 @@ public:
         return block_mgr_.get_block(identity);
     }
 
-    std::vector<core::Identity> find_blocks_by_type(uint32_t type_id) const {
+    core::flat_vector<core::Identity, 4> find_blocks_by_type(uint32_t type_id) const {
         return block_mgr_.find_by_type(type_id);
     }
-    std::vector<core::Identity> find_blocks(
+    core::flat_vector<core::Identity, 4> find_blocks(
         std::function<bool(const DataBlock&)> pred) const {
         return block_mgr_.find(std::move(pred));
     }
@@ -92,8 +91,8 @@ public:
 
     SchedulerType& scheduler() { return scheduler_; }
     const SchedulerType& scheduler() const { return scheduler_; }
-    const std::unordered_map<core::Identity, DataBlock>& raw_blocks() const { return block_mgr_.ref_blocks(); }
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& block_types() const { return types_; }
+    const core::rb_tree<core::Identity, DataBlock>& raw_blocks() const { return block_mgr_.ref_blocks(); }
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& block_types() const { return types_; }
     size_t pending_command_count() const { return scheduler_.pending_count(); }
 
     // ── Event System ───────────────────────────────────────────────
@@ -142,18 +141,18 @@ public:
     }
 
     // ── Conversation-style query wrappers ───────────────────────────
-    std::vector<core::Identity> blocks_of_type(uint32_t type_id) const {
+    core::flat_vector<core::Identity, 4> blocks_of_type(uint32_t type_id) const {
         return find_blocks_by_type(type_id);
     }
 
-    std::vector<core::Identity> blocks_where(
+    core::flat_vector<core::Identity, 4> blocks_where(
         std::function<bool(const DataBlock&)> pred) const {
         return find_blocks(std::move(pred));
     }
 
     // ── Serialization API ──────────────────────────────────────────
     Snapshot save() const;
-    void load(const Snapshot& snapshot);
+    void load(Snapshot snapshot);
 
     // ── Block Relationships API ────────────────────────────────────
     core::Result<void> relate(core::Identity parent, core::Identity child) {
@@ -221,7 +220,8 @@ public:
         BlockTypeBuilder& ephemeral() { desc_.ephemeral = true; return *this; }
 
         BlockTypeBuilder& semantic(const core::SemanticConstraint& sc) {
-            desc_.semantic = &sc;
+            desc_.semantic = sc;
+            desc_.has_semantic = true;
             return *this;
         }
 
@@ -242,14 +242,14 @@ public:
     };
 
     class BlockQuery {
-        const std::unordered_map<core::Identity, DataBlock>* blocks_;
-        const std::unordered_map<std::string, uint32_t>* type_names_;
+        const core::rb_tree<core::Identity, DataBlock>* blocks_;
+        const core::rb_tree<std::string, uint32_t>* type_names_;
         uint32_t filter_type_{0};
         bool has_type_filter_{false};
         std::function<bool(const DataBlock&)> filter_pred_;
     public:
-        explicit BlockQuery(const std::unordered_map<core::Identity, DataBlock>* blocks,
-                            const std::unordered_map<std::string, uint32_t>* type_names)
+        explicit BlockQuery(const core::rb_tree<core::Identity, DataBlock>* blocks,
+                            const core::rb_tree<std::string, uint32_t>* type_names)
             : blocks_{blocks}, type_names_{type_names} {}
 
         BlockQuery& of_type(uint32_t type_id) {
@@ -279,8 +279,8 @@ public:
         }
 
         template <typename U>
-        std::vector<U> map(std::function<U(const DataBlock&)> f) const {
-            std::vector<U> out;
+        core::flat_vector<U, 4> map(std::function<U(const DataBlock&)> f) const {
+            core::flat_vector<U, 4> out;
             for_each([&](const DataBlock& b) { out.push_back(f(b)); });
             return out;
         }
@@ -353,10 +353,10 @@ public:
     UnrelateBuilder unrelate(core::Identity parent) {
         return UnrelateBuilder{this, parent};
     }
-    std::vector<core::Identity> children_of(core::Identity parent) const {
+    core::flat_vector<core::Identity, 4> children_of(core::Identity parent) const {
         return rel_mgr_.children_of(parent);
     }
-    std::vector<core::Identity> parents_of(core::Identity child) const {
+    core::flat_vector<core::Identity, 4> parents_of(core::Identity child) const {
         return rel_mgr_.parents_of(child);
     }
 
@@ -422,7 +422,7 @@ private:
 
     RuntimeConfig config_;
     SchedulerType scheduler_;
-    std::unordered_map<uint32_t, BlockTypeDescriptor> types_;
+    core::rb_tree<uint32_t, BlockTypeDescriptor> types_;
     gameak::core::flat_vector<ControllerEntry, 4> controllers_;
 
     CommandId next_command_id_{0};
@@ -437,10 +437,10 @@ private:
     BlockManager block_mgr_;
     RelationshipManager rel_mgr_;
 
-    std::unordered_map<std::string, uint32_t> type_name_to_id_;
+    core::rb_tree<std::string, uint32_t> type_name_to_id_;
     uint32_t next_block_type_id_{1};
 
-    std::vector<std::function<void(const TickResult&)>> after_tick_handlers_;
+    core::flat_vector<std::function<void(const TickResult&)>, 4> after_tick_handlers_;
     uint64_t next_after_tick_id_{0};
 };
 
@@ -486,13 +486,13 @@ core::Result<void> Runtime<S>::register_block_type(BlockTypeDescriptor descripto
         return core::Error{core::ErrorCode::DuplicateRegistration, "Block type name already registered"};
     }
 
-    if (descriptor.semantic) {
+    if (descriptor.has_semantic) {
         if (descriptor.size == 0) {
-            if (!descriptor.semantic->valid()) {
+            if (!descriptor.semantic.valid()) {
                 return core::Error{core::ErrorCode::InvalidOperation,
                                    "Semantic constraint present but invalid"};
             }
-            size_t inferred = core::bytes_for(*descriptor.semantic);
+            size_t inferred = core::bytes_for(descriptor.semantic);
             if (inferred == 0) {
                 return core::Error{core::ErrorCode::InvalidOperation,
                                    "Semantic constraint present but could not infer size"};
@@ -508,12 +508,16 @@ core::Result<void> Runtime<S>::register_block_type(BlockTypeDescriptor descripto
     descriptor.field_index.clear();
     descriptor.offset_index.clear();
     for (size_t i = 0; i < descriptor.fields.size(); ++i) {
-        descriptor.field_index[descriptor.fields[i].name] = i;
-        descriptor.offset_index[descriptor.fields[i].offset] = i;
+        descriptor.field_index.insert(descriptor.fields[i].name, i);
+        descriptor.offset_index.insert(descriptor.fields[i].offset, i);
     }
 
-    this->types_[descriptor.type_id] = descriptor;
-    this->type_name_to_id_[descriptor.name] = descriptor.type_id;
+    uint32_t tid = descriptor.type_id;
+    std::string name = descriptor.name;
+    this->types_.insert(tid, std::move(descriptor));
+    if (!name.empty()) {
+        this->type_name_to_id_.insert(name, tid);
+    }
     SPDLOG_DEBUG("Registered block type: id={}, name={}, size={}",
                  descriptor.type_id, descriptor.name, descriptor.size);
     return {};
@@ -580,10 +584,9 @@ TickResult Runtime<S>::tick(float time_delta) {
                 combined.status = ExecutionStatus::PartialFailure;
             }
 
-            combined.rejected_commands.insert(
-                combined.rejected_commands.end(),
-                std::make_move_iterator(sub.rejected_commands.begin()),
-                std::make_move_iterator(sub.rejected_commands.end()));
+            for (auto& rc : sub.rejected_commands) {
+                combined.rejected_commands.push_back(std::move(rc));
+            }
 
             this->accumulator_ -= this->fixed_timestep_;
 
@@ -641,9 +644,11 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
     // before and after snapshots, preventing spurious BlockCreated events).
     bool track_blocks = this->event_bus_.has_handler(EventBus::Type::BlockCreated) ||
                         this->event_bus_.has_handler(EventBus::Type::BlockDestroyed);
-    std::unordered_map<core::Identity, DataBlock> before_blocks;
+    core::rb_tree<core::Identity, DataBlock> before_blocks;
     if (track_blocks) {
-        before_blocks = this->block_mgr_.ref_blocks();
+        for (const auto& [id, block] : this->block_mgr_.ref_blocks()) {
+            before_blocks.insert(id, block);
+        }
     }
 
     auto process_result = this->scheduler_.process_pending(
@@ -696,25 +701,44 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
 
 template <typename S>
 Snapshot Runtime<S>::save() const {
-    std::unordered_map<core::Identity, DataBlock> persistent_blocks;
+    core::rb_tree<core::Identity, DataBlock> persistent_blocks;
     for (const auto& [id, block] : this->block_mgr_.ref_blocks()) {
         auto tit = this->types_.find(block.type_id());
         if (tit != this->types_.end() && tit->second.ephemeral) {
             continue;
         }
-        persistent_blocks.emplace(id, block);
+        persistent_blocks.insert(id, block);
+    }
+    core::rb_tree<uint32_t, BlockTypeDescriptor> types_copy;
+    for (const auto& [tid, desc] : this->types_) {
+        BlockTypeDescriptor d;
+        d.type_id = desc.type_id;
+        d.size = desc.size;
+        d.alignment = desc.alignment;
+        d.name = desc.name;
+        d.layout = desc.layout;
+        d.aosoa_config = desc.aosoa_config;
+        d.fields = desc.fields;
+        d.ephemeral = desc.ephemeral;
+        d.semantic = desc.semantic;
+        d.has_semantic = desc.has_semantic;
+        for (size_t i = 0; i < d.fields.size(); ++i) {
+            d.field_index.insert(d.fields[i].name, i);
+            d.offset_index.insert(d.fields[i].offset, i);
+        }
+        types_copy.insert(tid, std::move(d));
     }
     return Snapshot{
         .blocks        = std::move(persistent_blocks),
-        .types         = this->types_,
+        .types         = std::move(types_copy),
         .next_identity = this->next_identity_,
     };
 }
 
 template <typename S>
-void Runtime<S>::load(const Snapshot& snapshot) {
-    this->block_mgr_.set_blocks(snapshot.blocks);
-    this->types_         = snapshot.types;
+void Runtime<S>::load(Snapshot snapshot) {
+    this->block_mgr_.set_blocks(std::move(snapshot.blocks));
+    this->types_         = std::move(snapshot.types);
     this->next_identity_ = snapshot.next_identity;
 }
 

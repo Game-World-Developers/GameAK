@@ -11,8 +11,8 @@ class SetFieldHandler : public ICommandHandler {
 
     core::Result<void> validate(
         const CommandPayload& payload,
-        const std::unordered_map<core::Identity, DataBlock>& blocks,
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>&) override
+        const core::rb_tree<core::Identity, DataBlock>& blocks,
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>&) override
     {
         const auto& p = std::get<CommandSetField>(payload);
         for (auto target : p.targets) {
@@ -32,8 +32,8 @@ class SetFieldHandler : public ICommandHandler {
 
     core::Result<void> execute(
         CommandPayload& payload,
-        std::unordered_map<core::Identity, DataBlock>& blocks,
-        std::unordered_map<uint32_t, BlockTypeDescriptor>&,
+        core::rb_tree<core::Identity, DataBlock>& blocks,
+        core::rb_tree<uint32_t, BlockTypeDescriptor>&,
         uint64_t&) override
     {
         auto& p = std::get<CommandSetField>(payload);

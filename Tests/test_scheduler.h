@@ -11,7 +11,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -30,7 +30,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         expect(id1.has_value()).toBeTruthy();
@@ -52,7 +52,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -69,7 +69,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -88,7 +88,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         Identity fake{999};
         auto id = rt.submit_command(Command{CommandDestroyBlock{{fake}}});
@@ -123,7 +123,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -144,8 +144,10 @@ describe("Scheduler", {
         DefaultRuntime rt2;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt1.register_block_type(desc).has_value()).toBeTruthy();
-        expect(rt2.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt1.register_block_type(std::move(desc)).has_value()).toBeTruthy();
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 1; desc2.size = sizeof(int); desc2.alignment = alignof(int); desc2.name = "test";
+        expect(rt2.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
         auto ctrl = [](StateView&, CommandProducer& producer, EphemeralProducer&) -> Result<void> {
             auto r = producer.produce(Command{CommandCreateBlock{1}});
@@ -170,7 +172,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         expect(rt.scheduler().pending_count() == 0).toBeTruthy();
         auto _s1 = rt.submit_command(Command{CommandCreateBlock{1}}); (void)_s1;
@@ -183,7 +185,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto _s = rt.submit_command(Command{CommandCreateBlock{1}}); (void)_s;
         rt.tick();
@@ -194,7 +196,7 @@ describe("Scheduler", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto _s1 = rt.submit_command(Command{CommandCreateBlock{1}}); (void)_s1;
         auto _s2 = rt.submit_command(Command{CommandCreateBlock{1}}); (void)_s2;
@@ -208,7 +210,7 @@ describe("Scheduler", {
         PriorityRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         std::vector<CommandId> exec_order;
         rt.scheduler().set_priority_fn(
@@ -231,7 +233,7 @@ describe("Scheduler", {
         PriorityRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});

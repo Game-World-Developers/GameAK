@@ -16,7 +16,7 @@ namespace ephemeral_helpers {
         persistent.alignment = alignof(int);
         persistent.name = "persistent";
         persistent.ephemeral = false;
-        auto _a = rt.register_block_type(persistent);
+        auto _a = rt.register_block_type(std::move(persistent));
         (void)_a;
 
         BlockTypeDescriptor ephemeral;
@@ -25,7 +25,7 @@ namespace ephemeral_helpers {
         ephemeral.alignment = alignof(int);
         ephemeral.name = "ephemeral";
         ephemeral.ephemeral = true;
-        auto _b = rt.register_block_type(ephemeral);
+        auto _b = rt.register_block_type(std::move(ephemeral));
         (void)_b;
     }
 

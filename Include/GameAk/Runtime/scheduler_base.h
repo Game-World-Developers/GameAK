@@ -4,12 +4,11 @@
 #include "data_block.h"
 #include "command_dispatcher.h"
 #include "GameAk/Core/error.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/rb_tree.h"
 
 #include <cstdint>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
 
 namespace gameak::runtime {
 
@@ -21,8 +20,8 @@ public:
     }
 
     core::Result<void> process_pending(
-        std::unordered_map<core::Identity, DataBlock>& blocks,
-        std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        core::rb_tree<core::Identity, DataBlock>& blocks,
+        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity) {
         return derived().process_pending_impl(blocks, types, next_identity);
     }
@@ -31,7 +30,7 @@ public:
         derived().cancel_impl(id);
     }
 
-    std::vector<RejectedCommand> take_rejected() {
+    core::flat_vector<RejectedCommand, 4> take_rejected() {
         return derived().take_rejected_impl();
     }
 
@@ -42,7 +41,7 @@ public:
     size_t rejected_count() const { return derived().rejected_count_impl(); }
     size_t skipped_count() const { return derived().skipped_count_impl(); }
 
-    const std::vector<Command>& history() const { return derived().history_impl(); }
+    const core::flat_vector<Command, 1>& history() const { return derived().history_impl(); }
     void clear_history() { derived().clear_history_impl(); }
 
 protected:
@@ -52,20 +51,22 @@ protected:
     /// Returns false if the command was cancelled and should be skipped.
     bool process_command(
         Command& command,
-        std::unordered_map<core::Identity, DataBlock>& blocks,
-        std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        core::rb_tree<core::Identity, DataBlock>& blocks,
+        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity,
-        std::unordered_set<CommandId>& cancelled,
-        std::vector<RejectedCommand>& rejected_details,
-        std::vector<Command>& history,
+        core::flat_vector<CommandId, 4>& cancelled,
+        core::flat_vector<RejectedCommand, 4>& rejected_details,
+        core::flat_vector<Command, 1>& history,
         size_t& executed,
         size_t& rejected,
         size_t& skipped)
     {
-        if (cancelled.contains(command.id())) {
-            cancelled.erase(command.id());
-            skipped++;
-            return false;
+        for (size_t i = 0; i < cancelled.size(); ++i) {
+            if (cancelled[i] == command.id()) {
+                cancelled.erase(cancelled.begin() + i);
+                skipped++;
+                return false;
+            }
         }
 
         auto validation = detail::validate_command(command, blocks, types);

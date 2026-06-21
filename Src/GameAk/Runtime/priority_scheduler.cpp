@@ -4,8 +4,8 @@
 namespace gameak::runtime {
 
 core::Result<void> PriorityScheduler::process_pending_impl(
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    core::rb_tree<core::Identity, DataBlock>& blocks,
+    core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity) {
 
     // Sort by priority (higher = first)

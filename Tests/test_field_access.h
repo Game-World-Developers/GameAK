@@ -19,7 +19,7 @@ describe("FieldAccess", {
         desc.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"y", 4, sizeof(int), alignof(int)});
         desc.fields.push_back({"z", 8, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();
@@ -64,7 +64,7 @@ describe("FieldAccess", {
         desc.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"y", 4, sizeof(int), alignof(int)});
         desc.fields.push_back({"z", 8, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();
@@ -114,7 +114,7 @@ describe("FieldAccess", {
         desc.fields.push_back({"y", 4, sizeof(int), alignof(int)});
         desc.fields.push_back({"z", 8, sizeof(int), alignof(int)});
         desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();
@@ -160,7 +160,7 @@ describe("FieldAccess", {
         desc.alignment = alignof(int);
         desc.name = "Test";
         desc.fields.push_back({"val", 0, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         Identity invalid;
         auto checker = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
@@ -180,7 +180,7 @@ describe("FieldAccess", {
         desc.alignment = alignof(int);
         desc.name = "Test";
         desc.fields.push_back({"val", 0, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();
@@ -204,7 +204,7 @@ describe("FieldAccess", {
         desc.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"y", 4, sizeof(int), alignof(int)});
         desc.fields.push_back({"z", 8, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();
@@ -261,7 +261,7 @@ describe("FieldAccess", {
         desc.fields.push_back({"x", 0, sizeof(int), alignof(int)});
         desc.fields.push_back({"y", 4, sizeof(int), alignof(int)});
         desc.fields.push_back({"z", 8, sizeof(int), alignof(int)});
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.create_block(1);
         expect(id.has_value()).toBeTruthy();

@@ -1,12 +1,12 @@
 #pragma once
 
 #include "controller.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/result.h"
 
 #include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace gameak::runtime {
 
@@ -53,7 +53,7 @@ private:
         RuleDef def;
     };
 
-    std::vector<RuleEntry> rules_;
+    core::flat_vector<RuleEntry, 8> rules_;
     RuleId next_id_{1};
 };
 

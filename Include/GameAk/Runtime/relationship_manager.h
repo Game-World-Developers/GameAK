@@ -1,11 +1,11 @@
 #pragma once
 
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/rb_tree.h"
 #include "GameAk/Core/result.h"
 
 #include <cstdint>
-#include <unordered_map>
-#include <vector>
 
 namespace gameak::runtime {
 class DataBlock;
@@ -18,30 +18,27 @@ public:
     RelationshipManager() = default;
 
     core::Result<void> relate(core::Identity parent, core::Identity child,
-                              const std::unordered_map<core::Identity, DataBlock>* blocks = nullptr);
+                              const core::rb_tree<core::Identity, DataBlock>* blocks = nullptr);
     core::Result<void> unrelate(core::Identity parent, core::Identity child);
 
-    std::vector<core::Identity> children_of(core::Identity parent) const;
-    std::vector<core::Identity> parents_of(core::Identity child) const;
+    core::flat_vector<core::Identity, 4> children_of(core::Identity parent) const;
+    core::flat_vector<core::Identity, 4> parents_of(core::Identity child) const;
 
     // Exposed for save/load
-    const std::unordered_multimap<core::Identity, core::Identity>& parent_to_children() const {
-        return parent_to_children_;
-    }
-    std::unordered_multimap<core::Identity, core::Identity>& mut_parent_to_children() {
-        return parent_to_children_;
-    }
+    using RelMap = core::rb_tree<core::Identity, core::flat_vector<core::Identity, 4>>;
+    const RelMap& parent_to_children() const { return parent_to_children_; }
+    RelMap& mut_parent_to_children() { return parent_to_children_; }
 
 private:
-    std::unordered_multimap<core::Identity, core::Identity> parent_to_children_;
-    std::unordered_multimap<core::Identity, core::Identity> child_to_parents_;
+    RelMap parent_to_children_;
+    RelMap child_to_parents_;
 };
 
 // ── Inline implementation ──────────────────────────────────────────
 
 inline core::Result<void> RelationshipManager::relate(
     core::Identity parent, core::Identity child,
-    const std::unordered_map<core::Identity, DataBlock>* blocks)
+    const core::rb_tree<core::Identity, DataBlock>* blocks)
 {
     if (!parent.is_valid() || !child.is_valid()) {
         return core::Error{core::ErrorCode::InvalidIdentity, "Parent or child identity is invalid"};
@@ -57,8 +54,22 @@ inline core::Result<void> RelationshipManager::relate(
     if (parent == child) {
         return core::Error{core::ErrorCode::InvalidOperation, "Block cannot be related to itself"};
     }
-    parent_to_children_.emplace(parent, child);
-    child_to_parents_.emplace(child, parent);
+    {
+        auto it = parent_to_children_.find(parent);
+        if (it != parent_to_children_.end()) {
+            it->second.push_back(child);
+        } else {
+            parent_to_children_.insert(parent, {child});
+        }
+    }
+    {
+        auto it = child_to_parents_.find(child);
+        if (it != child_to_parents_.end()) {
+            it->second.push_back(parent);
+        } else {
+            child_to_parents_.insert(child, {parent});
+        }
+    }
     return {};
 }
 
@@ -66,39 +77,45 @@ inline core::Result<void> RelationshipManager::unrelate(core::Identity parent, c
     if (!parent.is_valid() || !child.is_valid()) {
         return core::Error{core::ErrorCode::InvalidIdentity, "Parent or child identity is invalid"};
     }
-    auto range = parent_to_children_.equal_range(parent);
-    for (auto it = range.first; it != range.second; ++it) {
-        if (it->second == child) {
-            parent_to_children_.erase(it);
-            break;
+    auto pit = parent_to_children_.find(parent);
+    if (pit != parent_to_children_.end()) {
+        auto& children = pit->second;
+        for (size_t i = 0; i < children.size(); ++i) {
+            if (children[i] == child) {
+                children.erase(children.begin() + i);
+                if (children.empty()) parent_to_children_.erase(parent);
+                break;
+            }
         }
     }
-    auto crange = child_to_parents_.equal_range(child);
-    for (auto it = crange.first; it != crange.second; ++it) {
-        if (it->second == parent) {
-            child_to_parents_.erase(it);
-            break;
+    auto cit = child_to_parents_.find(child);
+    if (cit != child_to_parents_.end()) {
+        auto& parents = cit->second;
+        for (size_t i = 0; i < parents.size(); ++i) {
+            if (parents[i] == parent) {
+                parents.erase(parents.begin() + i);
+                if (parents.empty()) child_to_parents_.erase(child);
+                break;
+            }
         }
     }
     return {};
 }
 
-inline std::vector<core::Identity> RelationshipManager::children_of(core::Identity parent) const {
-    std::vector<core::Identity> result;
-    auto range = parent_to_children_.equal_range(parent);
-    for (auto it = range.first; it != range.second; ++it) {
-        result.push_back(it->second);
+inline core::flat_vector<core::Identity, 4> RelationshipManager::children_of(core::Identity parent) const {
+    auto it = parent_to_children_.find(parent);
+    if (it != parent_to_children_.end()) {
+        return it->second;
     }
-    return result;
+    return {};
 }
 
-inline std::vector<core::Identity> RelationshipManager::parents_of(core::Identity child) const {
-    std::vector<core::Identity> result;
-    auto range = child_to_parents_.equal_range(child);
-    for (auto it = range.first; it != range.second; ++it) {
-        result.push_back(it->second);
+inline core::flat_vector<core::Identity, 4> RelationshipManager::parents_of(core::Identity child) const {
+    auto it = child_to_parents_.find(child);
+    if (it != child_to_parents_.end()) {
+        return it->second;
     }
-    return result;
+    return {};
 }
 
 } // namespace gameak::runtime

@@ -13,7 +13,7 @@ describe("Controllers", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "counter";
-        auto r1 = rt.register_block_type(desc);
+        auto r1 = rt.register_block_type(std::move(desc));
         expect(r1.has_value()).toBeTruthy();
 
         auto controller = [](StateView&, CommandProducer& producer, EphemeralProducer&) -> Result<void> {
@@ -38,7 +38,7 @@ describe("Controllers", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        auto r1 = rt.register_block_type(desc);
+        auto r1 = rt.register_block_type(std::move(desc));
         expect(r1.has_value()).toBeTruthy();
 
         auto controller = [](StateView&, CommandProducer& producer, EphemeralProducer&) -> Result<void> {
@@ -65,7 +65,7 @@ describe("Controllers", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto controller = [](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             return Error(ErrorCode::ControllerFailed, "controller error");
@@ -85,7 +85,7 @@ describe("Controllers", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -118,7 +118,7 @@ describe("Controllers", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         float captured_delta = 0.0f;
         auto controller = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
@@ -226,7 +226,7 @@ describe("Controllers", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto controller = [&](StateView&, CommandProducer& prod, EphemeralProducer&) -> Result<void> {
             return prod.create(1);
@@ -242,7 +242,7 @@ describe("Controllers", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();

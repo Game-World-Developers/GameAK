@@ -13,7 +13,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        auto r1 = rt.register_block_type(desc);
+        auto r1 = rt.register_block_type(std::move(desc));
         expect(r1.has_value()).toBeTruthy();
 
         auto submit = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -31,7 +31,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        auto r1 = rt.register_block_type(desc);
+        auto r1 = rt.register_block_type(std::move(desc));
         expect(r1.has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
@@ -52,18 +52,14 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        auto r1 = rt.register_block_type(desc);
+        auto r1 = rt.register_block_type(std::move(desc));
         expect(r1.has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
 
         int value = 42;
-        auto bytes = std::vector<std::byte>(
-            reinterpret_cast<std::byte*>(&value),
-            reinterpret_cast<std::byte*>(&value) + sizeof(int));
-
-        auto submit = rt.submit_command(Command{CommandSetField{{block.value()}, 0, bytes}});
+        auto submit = rt.submit_command(Command::set_field(block.value(), 0, value));
         expect(submit.has_value()).toBeTruthy();
 
         auto result = rt.tick();
@@ -84,7 +80,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(1);
@@ -108,7 +104,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -120,12 +116,8 @@ describe("Commands", {
         expect(rt.get_block(block.value())->size() == sizeof(int) * 2).toBeTruthy();
 
         int value = 99;
-        auto bytes = std::vector<std::byte>(
-            reinterpret_cast<std::byte*>(&value),
-            reinterpret_cast<std::byte*>(&value) + sizeof(int));
-
         auto set = rt.submit_command(
-            Command{CommandSetField{{block.value()}, sizeof(int), bytes}});
+            Command::set_field(block.value(), sizeof(int), value));
         expect(set.has_value()).toBeTruthy();
 
         auto result = rt.tick();
@@ -156,7 +148,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.submit_command(Command{CommandCreateBlock{1}});
         expect(id.has_value()).toBeTruthy();
@@ -176,7 +168,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -196,7 +188,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.submit_command(Command{CommandCreateBlock{1}});
         expect(id.has_value()).toBeTruthy();
@@ -224,7 +216,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         std::vector<CommandId> execution_order;
         rt.scheduler().set_priority_fn(
@@ -257,7 +249,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -276,7 +268,7 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -299,18 +291,14 @@ describe("Commands", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
 
         int value = 99;
-        auto bytes = std::vector<std::byte>(
-            reinterpret_cast<std::byte*>(&value),
-            reinterpret_cast<std::byte*>(&value) + sizeof(int));
-
         auto submit = rt.submit_command(
-            Command{CommandSetField{{block.value()}, 100, bytes}});
+            Command::set_field(block.value(), 100, value));
         expect(submit.has_value()).toBeTruthy();
 
         auto result = rt.tick();
@@ -387,7 +375,7 @@ describe("Commands", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.submit_command(Command::create_block(1));
         expect(id.has_value()).toBeTruthy();

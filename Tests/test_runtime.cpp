@@ -78,7 +78,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        auto reg = rt.register_block_type(desc);
+        auto reg = rt.register_block_type(std::move(desc));
         expect(reg.has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
@@ -101,9 +101,11 @@ describe("Runtime", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1;
-        auto r1 = rt.register_block_type(desc);
+        auto r1 = rt.register_block_type(std::move(desc));
         expect(r1.has_value()).toBeTruthy();
-        auto r2 = rt.register_block_type(desc);
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 1;
+        auto r2 = rt.register_block_type(std::move(desc2));
         expect(r2.has_value()).toBeFalsy();
         expect(r2.error().code() == ErrorCode::DuplicateRegistration).toBeTruthy();
     });
@@ -128,7 +130,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Create blocks, note the IDs
         auto b1 = rt.create_block(1);
@@ -168,7 +170,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(1);
@@ -190,7 +192,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Submit command without ticking
         auto id = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -211,7 +213,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto diag = rt.collect_diagnostics();
         expect(diag.pending_commands == 0).toBeTruthy();
@@ -248,7 +250,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Create a block, run tick
         auto block = rt.create_block(1);
@@ -277,7 +279,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.pause();
         expect(rt.is_paused()).toBeTruthy();
@@ -295,7 +297,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.pause();
         auto r1 = rt.tick();
@@ -319,7 +321,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         // Set fixed timestep to 10ms
         rt.set_fixed_timestep(0.01f);
@@ -386,7 +388,7 @@ describe("Runtime", {
         desc.size = sizeof(int);
         desc.alignment = alignof(int);
         desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.pause();
         auto id = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -409,8 +411,8 @@ describe("Runtime", {
         desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "type1";
         BlockTypeDescriptor desc2;
         desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "type2";
-        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
-        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc1)).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(2);
@@ -438,8 +440,8 @@ describe("Runtime", {
         desc1.type_id = 1; desc1.size = 16; desc1.alignment = alignof(int); desc1.name = "small";
         BlockTypeDescriptor desc2;
         desc2.type_id = 2; desc2.size = 64; desc2.alignment = alignof(double); desc2.name = "large";
-        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
-        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc1)).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(2);
@@ -465,7 +467,7 @@ describe("Runtime", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -481,8 +483,8 @@ describe("Runtime", {
         desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "type1";
         BlockTypeDescriptor desc2;
         desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "type2";
-        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
-        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc1)).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(2);
@@ -499,7 +501,7 @@ describe("Runtime", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = 16; desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -538,7 +540,7 @@ describe("Events", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int created_count = 0;
         Identity created_id;
@@ -564,7 +566,7 @@ describe("Events", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -646,7 +648,7 @@ describe("Events", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int created = 0;
         int destroyed = 0;
@@ -677,7 +679,7 @@ describe("Serialization", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         expect(b1.has_value()).toBeTruthy();
@@ -694,7 +696,7 @@ describe("Serialization", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto b2 = rt.create_block(1);
@@ -709,7 +711,7 @@ describe("Serialization", {
         expect(rt.has_block(id1)).toBeFalsy();
 
         // Restore
-        rt.load(snap);
+        rt.load(std::move(snap));
         expect(rt.has_block(id1)).toBeTruthy();
         expect(rt.block_count(1) == 2).toBeTruthy();
     });
@@ -720,8 +722,8 @@ describe("Serialization", {
         desc1.type_id = 1; desc1.size = sizeof(int); desc1.alignment = alignof(int); desc1.name = "t1";
         BlockTypeDescriptor desc2;
         desc2.type_id = 2; desc2.size = sizeof(double); desc2.alignment = alignof(double); desc2.name = "t2";
-        expect(rt.register_block_type(desc1).has_value()).toBeTruthy();
-        expect(rt.register_block_type(desc2).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc1)).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -734,7 +736,7 @@ describe("Serialization", {
         // Mess up type_counts_ by poking at internal block_count
         // (just recreate snap and verify load works)
         DefaultRuntime rt2;
-        rt2.load(snap);
+        rt2.load(std::move(snap));
         expect(rt2.block_count(1) == 2).toBeTruthy();
         expect(rt2.block_count(2) == 1).toBeTruthy();
     });
@@ -751,7 +753,7 @@ describe("Relationships", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto parent = rt.create_block(1);
         auto child  = rt.create_block(1);
@@ -773,7 +775,7 @@ describe("Relationships", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto p = rt.create_block(1);
         auto c = rt.create_block(1);
@@ -790,7 +792,7 @@ describe("Relationships", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto p = rt.create_block(1);
         auto c1 = rt.create_block(1);
@@ -810,7 +812,7 @@ describe("Relationships", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto p1 = rt.create_block(1);
         auto p2 = rt.create_block(1);
@@ -827,7 +829,7 @@ describe("Relationships", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b = rt.create_block(1);
         expect(b.has_value()).toBeTruthy();
@@ -841,7 +843,7 @@ describe("Relationships", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b = rt.create_block(1);
         expect(b.has_value()).toBeTruthy();

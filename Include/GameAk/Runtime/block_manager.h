@@ -2,13 +2,13 @@
 
 #include "block_type.h"
 #include "data_block.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/rb_tree.h"
 #include "GameAk/Core/result.h"
 
 #include <cstdint>
 #include <functional>
-#include <unordered_map>
-#include <vector>
 
 namespace gameak::runtime {
 
@@ -18,18 +18,18 @@ public:
 
     core::Result<core::Identity> create(
         uint32_t type_id,
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity);
 
     core::Result<void> destroy(core::Identity identity);
 
     core::Result<core::Identity> create_ephemeral(
         uint32_t type_id,
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity);
 
     void destroy_all_ephemeral(
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>& types);
 
     bool has(core::Identity identity) const { return blocks_.contains(identity); }
     uint32_t type_id_for(core::Identity identity) const {
@@ -39,7 +39,7 @@ public:
     bool knows_identity(core::Identity identity) const {
         return identity_types_.contains(identity);
     }
-    const std::unordered_map<core::Identity, uint32_t>& identity_types() const {
+    const core::rb_tree<core::Identity, uint32_t>& identity_types() const {
         return identity_types_;
     }
     size_t count(uint32_t type_id) const {
@@ -53,31 +53,31 @@ public:
         return it != blocks_.end() ? &it->second : nullptr;
     }
 
-    std::vector<core::Identity> find_by_type(uint32_t type_id) const;
-    std::vector<core::Identity> find(
+    core::flat_vector<core::Identity, 4> find_by_type(uint32_t type_id) const;
+    core::flat_vector<core::Identity, 4> find(
         std::function<bool(const DataBlock&)> pred) const;
 
     void rebuild_counts();
 
     // Internal: exposed for save/load and layout conversion
-    const std::unordered_map<core::Identity, DataBlock>& ref_blocks() const { return blocks_; }
-    std::unordered_map<core::Identity, DataBlock>& mut_blocks() { return blocks_; }
-    void set_blocks(std::unordered_map<core::Identity, DataBlock> blocks) {
+    const core::rb_tree<core::Identity, DataBlock>& ref_blocks() const { return blocks_; }
+    core::rb_tree<core::Identity, DataBlock>& mut_blocks() { return blocks_; }
+    void set_blocks(core::rb_tree<core::Identity, DataBlock> blocks) {
         blocks_ = std::move(blocks);
         rebuild_counts();
     }
 
 private:
-    std::unordered_map<core::Identity, DataBlock> blocks_;
-    std::unordered_map<uint32_t, size_t> type_counts_;
-    std::unordered_map<core::Identity, uint32_t> identity_types_;
+    core::rb_tree<core::Identity, DataBlock> blocks_;
+    core::rb_tree<uint32_t, size_t> type_counts_;
+    core::rb_tree<core::Identity, uint32_t> identity_types_;
 };
 
 // ── Inline implementation ──────────────────────────────────────────
 
 inline core::Result<core::Identity> BlockManager::create(
     uint32_t type_id,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity)
 {
     auto it = types.find(type_id);
@@ -86,9 +86,11 @@ inline core::Result<core::Identity> BlockManager::create(
     }
     auto& desc = it->second;
     core::Identity id{++next_identity};
-    blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
-    identity_types_[id] = type_id;
-    type_counts_[type_id]++;
+    blocks_.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    identity_types_.insert(id, type_id);
+    auto tc = type_counts_.find(type_id);
+    if (tc != type_counts_.end()) tc->second++;
+    else type_counts_.insert(type_id, 1);
     return id;
 }
 
@@ -101,7 +103,7 @@ inline core::Result<void> BlockManager::destroy(core::Identity identity) {
         return core::Error{core::ErrorCode::BlockNotFound, "Block not found"};
     }
     uint32_t type_id = it->second.type_id();
-    blocks_.erase(it);
+    blocks_.erase(identity);
     identity_types_.erase(identity);
     auto tc = type_counts_.find(type_id);
     if (tc != type_counts_.end() && tc->second > 0) {
@@ -112,7 +114,7 @@ inline core::Result<void> BlockManager::destroy(core::Identity identity) {
 
 inline core::Result<core::Identity> BlockManager::create_ephemeral(
     uint32_t type_id,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity)
 {
     auto it = types.find(type_id);
@@ -125,16 +127,18 @@ inline core::Result<core::Identity> BlockManager::create_ephemeral(
     }
     auto& desc = it->second;
     core::Identity id{++next_identity};
-    blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
-    identity_types_[id] = type_id;
-    type_counts_[type_id]++;
+    blocks_.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    identity_types_.insert(id, type_id);
+    auto tc = type_counts_.find(type_id);
+    if (tc != type_counts_.end()) tc->second++;
+    else type_counts_.insert(type_id, 1);
     return id;
 }
 
 inline void BlockManager::destroy_all_ephemeral(
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
-    std::vector<core::Identity> to_destroy;
+    core::flat_vector<core::Identity, 4> to_destroy;
     for (auto& [id, block] : blocks_) {
         auto tit = types.find(block.type_id());
         if (tit != types.end() && tit->second.ephemeral) {
@@ -146,7 +150,7 @@ inline void BlockManager::destroy_all_ephemeral(
         if (bit != blocks_.end()) {
             uint32_t type_id = bit->second.type_id();
             identity_types_.erase(id);
-            blocks_.erase(bit);
+            blocks_.erase(id);
             auto tc = type_counts_.find(type_id);
             if (tc != type_counts_.end() && tc->second > 0) {
                 tc->second--;
@@ -155,16 +159,16 @@ inline void BlockManager::destroy_all_ephemeral(
     }
 }
 
-inline std::vector<core::Identity> BlockManager::find_by_type(uint32_t type_id) const {
+inline core::flat_vector<core::Identity, 4> BlockManager::find_by_type(uint32_t type_id) const {
     return find([type_id](const DataBlock& block) {
         return block.type_id() == type_id;
     });
 }
 
-inline std::vector<core::Identity> BlockManager::find(
+inline core::flat_vector<core::Identity, 4> BlockManager::find(
     std::function<bool(const DataBlock&)> pred) const
 {
-    std::vector<core::Identity> result;
+    core::flat_vector<core::Identity, 4> result;
     for (const auto& [id, block] : blocks_) {
         if (pred(block)) {
             result.push_back(id);
@@ -177,7 +181,9 @@ inline void BlockManager::rebuild_counts() {
     type_counts_.clear();
     for (const auto& [id, block] : blocks_) {
         (void)id;
-        type_counts_[block.type_id()]++;
+        auto tc = type_counts_.find(block.type_id());
+        if (tc != type_counts_.end()) tc->second++;
+        else type_counts_.insert(block.type_id(), 1);
     }
 }
 

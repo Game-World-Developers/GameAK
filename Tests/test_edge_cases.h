@@ -86,7 +86,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt.submit_command(Command{CommandDestroyBlock{{}}});
         expect(id.has_value()).toBeTruthy();
@@ -106,7 +106,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto block = rt.create_block(1);
         expect(block.has_value()).toBeTruthy();
@@ -124,7 +124,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.tick();
         expect(rt.scheduler().pending_count() == 0).toBeTruthy();
@@ -138,7 +138,7 @@ namespace edge_helpers {
         DefaultRuntime rt1;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt1.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt1.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id = rt1.submit_command(Command{CommandCreateBlock{1}});
         expect(id.has_value()).toBeTruthy();
@@ -146,7 +146,9 @@ namespace edge_helpers {
         expect(rt1.block_count(1) == 1).toBeTruthy();
 
         DefaultRuntime rt2;
-        expect(rt2.register_block_type(desc).has_value()).toBeTruthy();
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 1; desc2.size = sizeof(int); desc2.alignment = alignof(int); desc2.name = "test";
+        expect(rt2.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
 
         auto replay = rt2.replay_command(rt1.command_history()[0]);
         expect(replay.has_value()).toBeTruthy();
@@ -166,7 +168,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto failer = [](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {
             return Error(ErrorCode::ControllerFailed, "fail");
@@ -228,7 +230,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b = rt.create_block(1);
         expect(b.has_value()).toBeTruthy();
@@ -240,7 +242,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto p = rt.create_block(1);
         auto c = rt.create_block(1);
@@ -300,11 +302,11 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
 
         Snapshot empty;
-        rt.load(empty);
+        rt.load(std::move(empty));
         expect(rt.block_count(1) == 0).toBeTruthy();
     }
 
@@ -312,14 +314,14 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto b1 = rt.create_block(1);
         auto id1 = b1.value();
 
         for (int i = 0; i < 5; ++i) {
             auto snap = rt.save();
-            rt.load(snap);
+            rt.load(std::move(snap));
             expect(rt.has_block(id1)).toBeTruthy();
             expect(rt.block_count(1) == 1).toBeTruthy();
         }
@@ -334,7 +336,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         expect(rt.has_layout_storage(1)).toBeFalsy();
     }
 
@@ -342,7 +344,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.convert_to_soa(1);
         expect(rt.get_layout(1) == LayoutStrategy::SoA).toBeTruthy();
@@ -353,7 +355,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.convert_from_soa(1);
         expect(rt.get_layout(1) == LayoutStrategy::AoS).toBeTruthy();
@@ -363,7 +365,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.convert_to_soa(1);
         auto b = rt.create_block(1);
@@ -378,7 +380,7 @@ namespace edge_helpers {
 
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
         // SoA with no fields defined still has 0 fields
         // Field count is only meaningful when fields are in the descriptor
         expect(rt.soa_field_count(1) == 0).toBeTruthy();
@@ -451,7 +453,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         RuleSystem rs;
         rs.add_rule("temp", [](StateView&) { return true; }, [](StateView&, CommandProducer&, EphemeralProducer&) {}, 0);
@@ -599,7 +601,7 @@ namespace edge_helpers {
         PriorityRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto id1 = rt.submit_command(Command{CommandCreateBlock{1}});
         auto id2 = rt.submit_command(Command{CommandCreateBlock{1}});
@@ -623,8 +625,8 @@ namespace edge_helpers {
         desc_p.type_id = 1; desc_p.size = sizeof(int); desc_p.alignment = alignof(int); desc_p.name = "persistent";
         BlockTypeDescriptor desc_e;
         desc_e.type_id = 2; desc_e.size = sizeof(int); desc_e.alignment = alignof(int); desc_e.name = "ephemeral"; desc_e.ephemeral = true;
-        expect(rt.register_block_type(desc_p).has_value()).toBeTruthy();
-        expect(rt.register_block_type(desc_e).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_p)).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_e)).has_value()).toBeTruthy();
 
         auto p1 = rt.create_block(1);
         auto e1 = rt.create_ephemeral_block(2);
@@ -643,7 +645,7 @@ namespace edge_helpers {
         DefaultRuntime rt;
         BlockTypeDescriptor desc_e;
         desc_e.type_id = 2; desc_e.size = sizeof(int); desc_e.alignment = alignof(int); desc_e.name = "ephemeral"; desc_e.ephemeral = true;
-        expect(rt.register_block_type(desc_e).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc_e)).has_value()).toBeTruthy();
 
         Identity created;
         auto creator = [&](StateView&, CommandProducer&, EphemeralProducer& ephem) -> Result<void> {

@@ -6,8 +6,9 @@
 #include "cmd_resize_handler.h"
 #include "cmd_set_field_handler.h"
 
+#include "GameAk/Core/rb_tree.h"
+
 #include <memory>
-#include <unordered_map>
 
 namespace gameak::runtime::detail {
 
@@ -22,13 +23,13 @@ public:
     }
 
     void register_handler(std::unique_ptr<ICommandHandler> handler) {
-        handlers_[handler->type()] = std::move(handler);
+        handlers_.insert(handler->type(), std::move(handler));
     }
 
     core::Result<void> validate(
         const Command& command,
-        const std::unordered_map<core::Identity, DataBlock>& blocks,
-        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types) const
+        const core::rb_tree<core::Identity, DataBlock>& blocks,
+        const core::rb_tree<uint32_t, BlockTypeDescriptor>& types) const
     {
         auto it = handlers_.find(command.type());
         if (it == handlers_.end()) {
@@ -39,8 +40,8 @@ public:
 
     core::Result<void> execute(
         Command& command,
-        std::unordered_map<core::Identity, DataBlock>& blocks,
-        std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        core::rb_tree<core::Identity, DataBlock>& blocks,
+        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
         uint64_t& next_identity) const
     {
         auto it = handlers_.find(command.type());
@@ -51,7 +52,7 @@ public:
     }
 
 private:
-    std::unordered_map<CommandType, std::unique_ptr<ICommandHandler>> handlers_;
+    core::rb_tree<CommandType, std::unique_ptr<ICommandHandler>> handlers_;
 };
 
 // Global dispatcher instance (lazy, header-only)
@@ -63,16 +64,16 @@ inline CommandDispatcher& get_dispatcher() {
 // Free functions (drop-in replacements)
 inline core::Result<void> validate_command(
     const Command& command,
-    const std::unordered_map<core::Identity, DataBlock>& blocks,
-    const std::unordered_map<uint32_t, BlockTypeDescriptor>& types)
+    const core::rb_tree<core::Identity, DataBlock>& blocks,
+    const core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
     return get_dispatcher().validate(command, blocks, types);
 }
 
 inline core::Result<void> execute_command(
     Command& command,
-    std::unordered_map<core::Identity, DataBlock>& blocks,
-    std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+    core::rb_tree<core::Identity, DataBlock>& blocks,
+    core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
     uint64_t& next_identity)
 {
     return get_dispatcher().execute(command, blocks, types, next_identity);

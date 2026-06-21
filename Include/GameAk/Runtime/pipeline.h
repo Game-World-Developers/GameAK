@@ -1,11 +1,11 @@
 #pragma once
 
 #include "controller.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/result.h"
 
 #include <memory>
 #include <string>
-#include <vector>
 
 // Pipeline uses shared_ptr for results propagation
 
@@ -38,7 +38,7 @@ public:
 
     Controller build();
 
-    std::vector<StageResult> last_results() const;
+    core::flat_vector<StageResult, 8> last_results() const;
 
 private:
     struct Stage {
@@ -47,9 +47,9 @@ private:
         Controller controller;
     };
 
-    std::vector<Stage> stages_;
+    core::flat_vector<Stage, 8> stages_;
     StageId next_id_{1};
-    std::shared_ptr<std::vector<StageResult>> results_ptr_{std::make_shared<std::vector<StageResult>>()};
+    std::shared_ptr<core::flat_vector<StageResult, 8>> results_ptr_{std::make_shared<core::flat_vector<StageResult, 8>>()};
 };
 
 } // namespace gameak::runtime

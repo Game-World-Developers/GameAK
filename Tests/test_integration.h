@@ -11,7 +11,7 @@ describe("Integration", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int pipeline_count = 0;
         Pipeline pipe;
@@ -66,12 +66,12 @@ describe("Integration", {
         BlockTypeDescriptor persistent;
         persistent.type_id = 1; persistent.size = sizeof(int); persistent.alignment = alignof(int);
         persistent.name = "persistent"; persistent.ephemeral = false;
-        expect(rt.register_block_type(persistent).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(persistent)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor ephemeral;
         ephemeral.type_id = 2; ephemeral.size = sizeof(int); ephemeral.alignment = alignof(int);
         ephemeral.name = "ephemeral"; ephemeral.ephemeral = true;
-        expect(rt.register_block_type(ephemeral).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(ephemeral)).has_value()).toBeTruthy();
 
         int created_count = 0;
         int destroyed_count = 0;
@@ -99,12 +99,12 @@ describe("Integration", {
         BlockTypeDescriptor persistent;
         persistent.type_id = 1; persistent.size = sizeof(int); persistent.alignment = alignof(int);
         persistent.name = "persistent";
-        expect(rt.register_block_type(persistent).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(persistent)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor ephemeral;
         ephemeral.type_id = 2; ephemeral.size = sizeof(int); ephemeral.alignment = alignof(int);
         ephemeral.name = "ephemeral"; ephemeral.ephemeral = true;
-        expect(rt.register_block_type(ephemeral).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(ephemeral)).has_value()).toBeTruthy();
 
         Identity persistent_id;
         Identity ephemeral_id;
@@ -144,7 +144,7 @@ describe("Integration", {
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int);
         desc.name = "test"; desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto parent = rt.create_block(1);
         auto child = rt.create_block(1);
@@ -171,7 +171,7 @@ describe("Integration", {
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int) * 4; desc.alignment = alignof(int);
         desc.name = "test"; desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         expect(rt.create_block(1).has_value()).toBeTruthy();
         expect(rt.create_block(1).has_value()).toBeTruthy();
@@ -185,8 +185,10 @@ describe("Integration", {
         expect(snap_aos.blocks.size() == 2).toBeTruthy();
 
         DefaultRuntime rt2;
-        expect(rt2.register_block_type(desc).has_value()).toBeTruthy();
-        rt2.load(snap_aos);
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 1; desc2.size = sizeof(int) * 4; desc2.alignment = alignof(int); desc2.name = "test";
+        expect(rt2.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
+        rt2.load(std::move(snap_aos));
         expect(rt2.block_count(1) == 2).toBeTruthy();
     });
 
@@ -194,7 +196,7 @@ describe("Integration", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         auto p = rt.create_block(1);
         auto c = rt.create_block(1);
@@ -205,8 +207,10 @@ describe("Integration", {
         expect(rt.children_of(p.value()).size() == 1).toBeTruthy();
 
         DefaultRuntime rt2;
-        expect(rt2.register_block_type(desc).has_value()).toBeTruthy();
-        rt2.load(snap);
+        BlockTypeDescriptor desc2;
+        desc2.type_id = 1; desc2.size = sizeof(int); desc2.alignment = alignof(int); desc2.name = "test";
+        expect(rt2.register_block_type(std::move(desc2)).has_value()).toBeTruthy();
+        rt2.load(std::move(snap));
 
         expect(rt2.has_block(p.value())).toBeTruthy();
         expect(rt2.has_block(c.value())).toBeTruthy();
@@ -217,7 +221,7 @@ describe("Integration", {
         PriorityRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         rt.scheduler().set_priority_fn([](const Command&) { return 0; });
 
@@ -244,7 +248,7 @@ describe("Integration", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         int ctrl_count = 0;
         auto ctrl = [&](StateView&, CommandProducer&, EphemeralProducer&) -> Result<void> {

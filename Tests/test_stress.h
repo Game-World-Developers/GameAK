@@ -11,7 +11,7 @@ describe("Stress", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         for (int round = 0; round < 10; ++round) {
             std::vector<Identity> ids;
@@ -35,7 +35,7 @@ describe("Stress", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         for (int round = 0; round < 10; ++round) {
             std::vector<Identity> ids;
@@ -59,7 +59,7 @@ describe("Stress", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         constexpr int NUM_CONTROLLERS = 100;
         for (int i = 0; i < NUM_CONTROLLERS; ++i) {
@@ -88,7 +88,7 @@ describe("Stress", {
         DefaultRuntime rt;
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int); desc.alignment = alignof(int); desc.name = "test";
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         constexpr int NUM_STAGES = 50;
         Pipeline pipe;
@@ -120,7 +120,7 @@ describe("Stress", {
         BlockTypeDescriptor desc;
         desc.type_id = 1; desc.size = sizeof(int) * 4; desc.alignment = alignof(int);
         desc.name = "test"; desc.layout = LayoutStrategy::AoS;
-        expect(rt.register_block_type(desc).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(desc)).has_value()).toBeTruthy();
 
         std::vector<Identity> ids;
         for (int i = 0; i < 100; ++i) {
@@ -147,12 +147,12 @@ describe("Stress", {
         BlockTypeDescriptor persistent;
         persistent.type_id = 1; persistent.size = sizeof(int); persistent.alignment = alignof(int);
         persistent.name = "persistent";
-        expect(rt.register_block_type(persistent).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(persistent)).has_value()).toBeTruthy();
 
         BlockTypeDescriptor ephemeral;
         ephemeral.type_id = 2; ephemeral.size = sizeof(int); ephemeral.alignment = alignof(int);
         ephemeral.name = "ephemeral"; ephemeral.ephemeral = true;
-        expect(rt.register_block_type(ephemeral).has_value()).toBeTruthy();
+        expect(rt.register_block_type(std::move(ephemeral)).has_value()).toBeTruthy();
 
         constexpr int NUM_CTRLS = 100;
         for (int i = 0; i < NUM_CTRLS; ++i) {

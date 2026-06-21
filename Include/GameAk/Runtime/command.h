@@ -3,12 +3,13 @@
 #include "layout_strategy.h"
 
 #include "GameAk/Core/error.h"
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
 #include "GameAk/Core/result.h"
 
 #include <cstdint>
+#include <cstring>
 #include <variant>
-#include <vector>
 
 namespace gameak::runtime {
 
@@ -34,17 +35,17 @@ struct CommandCreateBlock {
 };
 
 struct CommandDestroyBlock {
-    std::vector<core::Identity> targets;
+    core::flat_vector<core::Identity, 4> targets;
 };
 
 struct CommandSetField {
-    std::vector<core::Identity> targets;
+    core::flat_vector<core::Identity, 4> targets;
     size_t offset;
-    std::vector<std::byte> data;
+    core::flat_vector<std::byte, 8> data;
 };
 
 struct CommandResizeBlock {
-    std::vector<core::Identity> targets;
+    core::flat_vector<core::Identity, 4> targets;
     size_t new_size;
 };
 
@@ -79,7 +80,7 @@ public:
         return Command{CommandPayload{CommandDestroyBlock{{target}}}};
     }
 
-    static Command destroy_blocks(std::vector<core::Identity> targets) {
+    static Command destroy_blocks(core::flat_vector<core::Identity, 4> targets) {
         return Command{CommandPayload{CommandDestroyBlock{std::move(targets)}}};
     }
 
@@ -87,7 +88,7 @@ public:
         return Command{CommandPayload{CommandResizeBlock{{target}, new_size}}};
     }
 
-    static Command resize_blocks(std::vector<core::Identity> targets, size_t new_size) {
+    static Command resize_blocks(core::flat_vector<core::Identity, 4> targets, size_t new_size) {
         return Command{CommandPayload{CommandResizeBlock{std::move(targets), new_size}}};
     }
 
@@ -97,15 +98,18 @@ public:
 
     template <typename T>
     static Command set_field(core::Identity target, size_t offset, const T& value) {
-        const auto* ptr = reinterpret_cast<const std::byte*>(&value);
-        std::vector<std::byte> data(ptr, ptr + sizeof(T));
+        core::flat_vector<std::byte, 8> data;
+        data.resize(sizeof(T));
+        std::memcpy(data.data(), &value, sizeof(T));
         return Command{CommandPayload{CommandSetField{{target}, offset, std::move(data)}}};
     }
 
     static Command set_field_raw(core::Identity target, size_t offset,
-                                  const std::byte* data, size_t size) {
-        std::vector<std::byte> bytes(data, data + size);
-        return Command{CommandPayload{CommandSetField{{target}, offset, std::move(bytes)}}};
+                                  const std::byte* src, size_t size) {
+        core::flat_vector<std::byte, 8> data;
+        data.resize(size);
+        std::memcpy(data.data(), src, size);
+        return Command{CommandPayload{CommandSetField{{target}, offset, std::move(data)}}};
     }
 
 private:

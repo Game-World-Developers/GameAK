@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
+#include <initializer_list>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -125,6 +126,13 @@ public:
         clear();
         if (!is_inline()) {
             std::free(begin_);
+        }
+    }
+
+    flat_vector(std::initializer_list<T> init) : flat_vector() {
+        reserve(init.size());
+        for (auto& v : init) {
+            push_back(v);
         }
     }
 

@@ -1,12 +1,12 @@
 #pragma once
 
+#include "GameAk/Core/flat_vector.h"
 #include "GameAk/Core/identity.h"
+#include "GameAk/Core/rb_tree.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <functional>
-#include <unordered_map>
-#include <vector>
 #include <utility>
 
 namespace gameak::runtime {
@@ -31,7 +31,12 @@ public:
 
     Id listen(Type type, Handler handler) {
         Id id = ++next_id_;
-        handlers_[type].emplace_back(id, std::move(handler));
+        auto it = handlers_.find(type);
+        if (it != handlers_.end()) {
+            it->second.emplace_back(id, std::move(handler));
+        } else {
+            handlers_.insert(type, {{id, std::move(handler)}});
+        }
         return id;
     }
 
@@ -81,7 +86,7 @@ public:
     }
 
 private:
-    std::unordered_map<Type, std::vector<std::pair<Id, Handler>>> handlers_;
+    core::rb_tree<Type, core::flat_vector<std::pair<Id, Handler>, 4>> handlers_;
     Id next_id_{1};
 };
 

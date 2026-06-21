@@ -6,6 +6,7 @@
 #include "GameAk/Core/identity.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <span>
@@ -26,11 +27,13 @@ public:
     struct SoAStorage {
         std::vector<core::Identity> identities;
         std::vector<FieldArray> fields;
+        std::unordered_map<core::Identity, size_t> identity_index;
     };
 
     struct AoSoAChunk {
         std::vector<core::Identity> identities;
         std::vector<FieldArray> fields;
+        std::unordered_map<core::Identity, size_t> identity_index;
     };
 
     struct AoSoAStorage {
@@ -119,6 +122,67 @@ public:
         return it->second.chunks[0].fields.size();
     }
 
+    /// Read a single field value from any layout (AoS, SoA, AoSoA).
+    /// Returns nullptr if the identity or field is not found.
+    /// @param types  The Runtime's block type descriptors (needed for AoS field offsets).
+    const std::byte* read_field(
+        core::Identity identity,
+        uint32_t type_id,
+        size_t field_index,
+        const std::unordered_map<uint32_t, BlockTypeDescriptor>& types,
+        const std::unordered_map<core::Identity, DataBlock>& blocks) const
+    {
+        // Check AoS first (blocks in the main map)
+        auto bit = blocks.find(identity);
+        if (bit != blocks.end()) {
+            auto tit = types.find(type_id);
+            if (tit != types.end()) {
+                auto& desc = tit->second;
+                if (field_index < desc.fields.size()) {
+                    size_t offset = desc.fields[field_index].offset;
+                    return static_cast<const std::byte*>(bit->second.data()) + offset;
+                }
+            }
+            // No field descriptors — return raw block data
+            return static_cast<const std::byte*>(bit->second.data());
+        }
+
+        // Check SoA
+        auto sit = layout_storage_.find(type_id);
+        if (sit != layout_storage_.end()) {
+            auto& storage = sit->second;
+            auto iit = storage.identity_index.find(identity);
+            if (iit != storage.identity_index.end()) {
+                if (field_index < storage.fields.size()) {
+                    auto& fa = storage.fields[field_index];
+                    size_t pos = iit->second * fa.field_size + fa.field_offset;
+                    if (pos + fa.field_size <= fa.data.size()) {
+                        return fa.data.data() + pos;
+                    }
+                }
+            }
+        }
+
+        // Check AoSoA
+        auto ait = layout_storage_aosoa_.find(type_id);
+        if (ait != layout_storage_aosoa_.end()) {
+            for (auto& chunk : ait->second.chunks) {
+                auto cit = chunk.identity_index.find(identity);
+                if (cit != chunk.identity_index.end()) {
+                    if (field_index < chunk.fields.size()) {
+                        auto& fa = chunk.fields[field_index];
+                        size_t pos = cit->second * fa.field_size;
+                        if (pos + fa.field_size <= fa.data.size()) {
+                            return fa.data.data() + pos;
+                        }
+                    }
+                }
+            }
+        }
+
+        return nullptr;
+    }
+
 private:
     void ensure_soa_storage(uint32_t type_id,
                             const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
@@ -185,13 +249,15 @@ inline void LayoutManager::convert_to_soa(
         blocks.erase(id);
     }
 
-    for (auto& [id, block] : existing) {
+    for (size_t ei = 0; ei < existing.size(); ++ei) {
+        auto& [id, block] = existing[ei];
         storage.identities.push_back(id);
+        storage.identity_index[id] = ei;
         for (size_t fi = 0; fi < storage.fields.size(); ++fi) {
             auto& fa = storage.fields[fi];
             size_t old_pos  = fa.field_offset;
             size_t copy_size = std::min(fa.field_size, block.size() - old_pos);
-            size_t new_pos  = (storage.identities.size() - 1) * fa.field_size + fa.field_offset;
+            size_t new_pos  = ei * fa.field_size + fa.field_offset;
             if (fa.data.size() < new_pos + copy_size) {
                 fa.data.resize(new_pos + copy_size);
             }
@@ -309,6 +375,7 @@ inline void LayoutManager::convert_to_aosoa(
             auto& [id, block] = existing[i];
             size_t local_idx = i - base;
             chunk.identities.push_back(id);
+            chunk.identity_index[id] = local_idx;
             for (size_t fi = 0; fi < chunk.fields.size(); ++fi) {
                 auto& fa = chunk.fields[fi];
                 size_t copy_size = std::min(fa.field_size, block.size() - fa.field_offset);

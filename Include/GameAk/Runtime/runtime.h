@@ -504,6 +504,14 @@ core::Result<void> Runtime<S>::register_block_type(BlockTypeDescriptor descripto
         }
     }
 
+    // Build field lookup maps
+    descriptor.field_index.clear();
+    descriptor.offset_index.clear();
+    for (size_t i = 0; i < descriptor.fields.size(); ++i) {
+        descriptor.field_index[descriptor.fields[i].name] = i;
+        descriptor.offset_index[descriptor.fields[i].offset] = i;
+    }
+
     this->types_[descriptor.type_id] = descriptor;
     this->type_name_to_id_[descriptor.name] = descriptor.type_id;
     SPDLOG_DEBUG("Registered block type: id={}, name={}, size={}",
@@ -606,7 +614,9 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
 
     size_t controller_count = 0;
     for (auto& entry : this->controllers_) {
-        StateView state_view{this->block_mgr_.ref_blocks(), this->types_, time_delta};
+        StateView state_view{this->block_mgr_.ref_blocks(), this->types_,
+                             this->layout_mgr_, this->block_mgr_.identity_types(),
+                             time_delta};
         CommandProducer producer{
             [this](Command cmd) -> core::Result<CommandId> {
                 return this->submit_command(std::move(cmd));

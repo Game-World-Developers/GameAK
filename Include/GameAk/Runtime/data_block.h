@@ -3,7 +3,9 @@
 #include "block_type.h"
 #include "GameAk/Core/identity.h"
 
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -23,11 +25,17 @@ public:
 
     template <typename T>
     T& field(size_t offset) {
+        assert(offset + sizeof(T) <= data_.size() && "field<T> out of bounds");
+        assert((reinterpret_cast<uintptr_t>(data_.data() + offset) & (alignof(T) - 1)) == 0
+               && "field<T> misaligned access");
         return *reinterpret_cast<T*>(data_.data() + offset);
     }
 
     template <typename T>
     const T& field(size_t offset) const {
+        assert(offset + sizeof(T) <= data_.size() && "field<T> out of bounds");
+        assert((reinterpret_cast<uintptr_t>(data_.data() + offset) & (alignof(T) - 1)) == 0
+               && "field<T> misaligned access");
         return *reinterpret_cast<const T*>(data_.data() + offset);
     }
 

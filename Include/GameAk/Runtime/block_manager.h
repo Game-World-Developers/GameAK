@@ -32,6 +32,16 @@ public:
         const std::unordered_map<uint32_t, BlockTypeDescriptor>& types);
 
     bool has(core::Identity identity) const { return blocks_.contains(identity); }
+    uint32_t type_id_for(core::Identity identity) const {
+        auto it = identity_types_.find(identity);
+        return it != identity_types_.end() ? it->second : 0;
+    }
+    bool knows_identity(core::Identity identity) const {
+        return identity_types_.contains(identity);
+    }
+    const std::unordered_map<core::Identity, uint32_t>& identity_types() const {
+        return identity_types_;
+    }
     size_t count(uint32_t type_id) const {
         auto it = type_counts_.find(type_id);
         return it != type_counts_.end() ? it->second : 0;
@@ -60,6 +70,7 @@ public:
 private:
     std::unordered_map<core::Identity, DataBlock> blocks_;
     std::unordered_map<uint32_t, size_t> type_counts_;
+    std::unordered_map<core::Identity, uint32_t> identity_types_;
 };
 
 // ── Inline implementation ──────────────────────────────────────────
@@ -76,6 +87,7 @@ inline core::Result<core::Identity> BlockManager::create(
     auto& desc = it->second;
     core::Identity id{++next_identity};
     blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    identity_types_[id] = type_id;
     type_counts_[type_id]++;
     return id;
 }
@@ -90,6 +102,7 @@ inline core::Result<void> BlockManager::destroy(core::Identity identity) {
     }
     uint32_t type_id = it->second.type_id();
     blocks_.erase(it);
+    identity_types_.erase(identity);
     auto tc = type_counts_.find(type_id);
     if (tc != type_counts_.end() && tc->second > 0) {
         tc->second--;
@@ -113,6 +126,7 @@ inline core::Result<core::Identity> BlockManager::create_ephemeral(
     auto& desc = it->second;
     core::Identity id{++next_identity};
     blocks_.emplace(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    identity_types_[id] = type_id;
     type_counts_[type_id]++;
     return id;
 }
@@ -131,6 +145,7 @@ inline void BlockManager::destroy_all_ephemeral(
         auto bit = blocks_.find(id);
         if (bit != blocks_.end()) {
             uint32_t type_id = bit->second.type_id();
+            identity_types_.erase(id);
             blocks_.erase(bit);
             auto tc = type_counts_.find(type_id);
             if (tc != type_counts_.end() && tc->second > 0) {

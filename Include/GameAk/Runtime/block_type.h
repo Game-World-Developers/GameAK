@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace gameak::runtime {
@@ -30,6 +31,8 @@ struct BlockTypeDescriptor {
     LayoutStrategy layout{LayoutStrategy::AoS};
     AoSoAConfig aosoa_config{};
     std::vector<FieldDescriptor> fields;
+    std::unordered_map<std::string, size_t> field_index;  // field name → index in fields[]
+    std::unordered_map<size_t, size_t> offset_index;     // field offset → index in fields[]
     bool ephemeral{false};
     const core::SemanticConstraint* semantic{nullptr};
 };

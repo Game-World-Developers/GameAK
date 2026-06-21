@@ -61,6 +61,7 @@
 #include "test_dsl_config.h"
 #include "test_dsl_relationships.h"
 #include "test_dsl_callbacks.h"
+#include "test_field_access.h"
 #include "test_platform_crtp.h"
 
 using namespace gameak::core;
@@ -948,6 +949,7 @@ int main(int argc, char* argv[]) {
     run_dsl_config_tests();
     run_dsl_relationship_tests();
     run_dsl_callback_tests();
+    run_field_access_tests();
     run_platform_crtp_tests();
     return cest_result();
 }

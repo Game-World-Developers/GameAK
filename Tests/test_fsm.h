@@ -151,14 +151,14 @@ namespace fsm_helpers {
     }
 
     void test_fsm_enqueue_triggers_transition() {
-        auto fsm = std::make_shared<Fsm<GameState, GameEvent>>();
-        fsm->initial_state(GameState::Menu)
+        Fsm<GameState, GameEvent> fsm;
+        fsm.initial_state(GameState::Menu)
             .add_state(GameState::Menu)
             .add_state(GameState::Playing)
             .add_transition(GameState::Menu, GameEvent::Start, GameState::Playing);
 
-        auto ctrl = fsm->build();
-        fsm->enqueue_event(GameEvent::Start);
+        fsm.enqueue_event(GameEvent::Start);
+        auto ctrl = fsm.build();
 
         DefaultRuntime rt;
         Controller wrapper = [ctrl = std::move(ctrl)](StateView& v, CommandProducer& p, EphemeralProducer& e) mutable -> Result<void> {

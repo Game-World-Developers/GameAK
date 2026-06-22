@@ -53,11 +53,12 @@ public:
         return it != blocks_.end() ? &it->second : nullptr;
     }
 
-    core::flat_vector<core::Identity, 4> find_by_type(uint32_t type_id) const;
-    core::flat_vector<core::Identity, 4> find(
+    core::flat_vector<core::Identity> find_by_type(uint32_t type_id) const;
+    core::flat_vector<core::Identity> find(
         std::function<bool(const DataBlock&)> pred) const;
 
     void rebuild_counts();
+    void rebuild_identity_types();
 
     // Internal: exposed for save/load and layout conversion
     const core::rb_tree<core::Identity, DataBlock>& ref_blocks() const { return blocks_; }
@@ -65,9 +66,23 @@ public:
     void set_blocks(core::rb_tree<core::Identity, DataBlock> blocks) {
         blocks_ = std::move(blocks);
         rebuild_counts();
+        rebuild_identity_types();
     }
 
+    core::rb_tree<core::Identity, uint32_t>& mut_identity_types() { return identity_types_; }
+    core::rb_tree<uint32_t, size_t>& mut_type_counts() { return type_counts_; }
+
+    // ── Buffer pool for recycling DataBlock memory ────────────────
+    void recycle_buffer(uint32_t type_id, core::flat_vector<std::byte>&& buf);
+    core::flat_vector<std::byte> acquire_buffer(uint32_t type_id, size_t size);
+
 private:
+    struct BufferPool {
+        uint32_t type_id;
+        core::flat_vector<core::flat_vector<std::byte>> buffers;
+    };
+    core::flat_vector<BufferPool> buffer_pools_;
+
     core::rb_tree<core::Identity, DataBlock> blocks_;
     core::rb_tree<uint32_t, size_t> type_counts_;
     core::rb_tree<core::Identity, uint32_t> identity_types_;
@@ -86,7 +101,13 @@ inline core::Result<core::Identity> BlockManager::create(
     }
     auto& desc = it->second;
     core::Identity id{++next_identity};
-    blocks_.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    // Try to reuse a recycled buffer for fixed-size types
+    auto buf = acquire_buffer(type_id, desc.size);
+    if (!buf.empty()) {
+        blocks_.insert(id, DataBlock{id, desc.type_id, std::move(buf)});
+    } else {
+        blocks_.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    }
     identity_types_.insert(id, type_id);
     auto tc = type_counts_.find(type_id);
     if (tc != type_counts_.end()) tc->second++;
@@ -103,6 +124,8 @@ inline core::Result<void> BlockManager::destroy(core::Identity identity) {
         return core::Error{core::ErrorCode::BlockNotFound, "Block not found"};
     }
     uint32_t type_id = it->second.type_id();
+    // Recycle the buffer before erasing
+    recycle_buffer(type_id, it->second.release_buffer());
     blocks_.erase(identity);
     identity_types_.erase(identity);
     auto tc = type_counts_.find(type_id);
@@ -127,7 +150,14 @@ inline core::Result<core::Identity> BlockManager::create_ephemeral(
     }
     auto& desc = it->second;
     core::Identity id{++next_identity};
-    blocks_.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+    {
+        auto buf = acquire_buffer(type_id, desc.size);
+        if (!buf.empty()) {
+            blocks_.insert(id, DataBlock{id, desc.type_id, std::move(buf)});
+        } else {
+            blocks_.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+        }
+    }
     identity_types_.insert(id, type_id);
     auto tc = type_counts_.find(type_id);
     if (tc != type_counts_.end()) tc->second++;
@@ -138,7 +168,7 @@ inline core::Result<core::Identity> BlockManager::create_ephemeral(
 inline void BlockManager::destroy_all_ephemeral(
     const core::rb_tree<uint32_t, BlockTypeDescriptor>& types)
 {
-    core::flat_vector<core::Identity, 4> to_destroy;
+    core::flat_vector<core::Identity> to_destroy;
     for (auto& [id, block] : blocks_) {
         auto tit = types.find(block.type_id());
         if (tit != types.end() && tit->second.ephemeral) {
@@ -149,6 +179,7 @@ inline void BlockManager::destroy_all_ephemeral(
         auto bit = blocks_.find(id);
         if (bit != blocks_.end()) {
             uint32_t type_id = bit->second.type_id();
+            recycle_buffer(type_id, bit->second.release_buffer());
             identity_types_.erase(id);
             blocks_.erase(id);
             auto tc = type_counts_.find(type_id);
@@ -159,22 +190,49 @@ inline void BlockManager::destroy_all_ephemeral(
     }
 }
 
-inline core::flat_vector<core::Identity, 4> BlockManager::find_by_type(uint32_t type_id) const {
+inline core::flat_vector<core::Identity> BlockManager::find_by_type(uint32_t type_id) const {
     return find([type_id](const DataBlock& block) {
         return block.type_id() == type_id;
     });
 }
 
-inline core::flat_vector<core::Identity, 4> BlockManager::find(
+inline core::flat_vector<core::Identity> BlockManager::find(
     std::function<bool(const DataBlock&)> pred) const
 {
-    core::flat_vector<core::Identity, 4> result;
+    core::flat_vector<core::Identity> result;
     for (const auto& [id, block] : blocks_) {
         if (pred(block)) {
             result.push_back(id);
         }
     }
     return result;
+}
+
+inline void BlockManager::recycle_buffer(uint32_t type_id, core::flat_vector<std::byte>&& buf) {
+    if (buf.empty()) return;
+    for (auto& pool : buffer_pools_) {
+        if (pool.type_id == type_id) {
+            pool.buffers.push_back(std::move(buf));
+            return;
+        }
+    }
+    BufferPool pool;
+    pool.type_id = type_id;
+    pool.buffers.push_back(std::move(buf));
+    buffer_pools_.push_back(std::move(pool));
+}
+
+inline core::flat_vector<std::byte> BlockManager::acquire_buffer(uint32_t type_id, size_t size) {
+    for (auto& pool : buffer_pools_) {
+        if (pool.type_id == type_id && !pool.buffers.empty()) {
+            auto buf = std::move(pool.buffers.back());
+            pool.buffers.pop_back();
+            buf.clear();
+            buf.resize(size);
+            return buf;
+        }
+    }
+    return {};
 }
 
 inline void BlockManager::rebuild_counts() {
@@ -184,6 +242,13 @@ inline void BlockManager::rebuild_counts() {
         auto tc = type_counts_.find(block.type_id());
         if (tc != type_counts_.end()) tc->second++;
         else type_counts_.insert(block.type_id(), 1);
+    }
+}
+
+inline void BlockManager::rebuild_identity_types() {
+    identity_types_.clear();
+    for (const auto& [id, block] : blocks_) {
+        identity_types_.insert(id, block.type_id());
     }
 }
 

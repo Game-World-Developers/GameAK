@@ -39,6 +39,8 @@ struct PlatformInfo {
     bool has_neon{false};
     bool has_wasm_simd{false};
 
+    uint32_t cache_line_size{64};
+
     std::string to_string() const;
 };
 
@@ -87,6 +89,14 @@ inline PlatformInfo detect_platform() {
 #endif
 #if defined(__wasm_simd128__)
     info.has_wasm_simd = true;
+#endif
+
+#if defined(__x86_64__) || defined(_M_AMD64)
+    info.cache_line_size = 64;
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    info.cache_line_size = 64;
+#elif defined(__wasm32__) || defined(__wasm64__)
+    info.cache_line_size = 64;
 #endif
 
     return info;

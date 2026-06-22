@@ -1,6 +1,7 @@
 #pragma once
 
 #include "command.h"
+#include "command_context.h"
 #include "data_block.h"
 #include "command_dispatcher.h"
 #include "GameAk/Core/error.h"
@@ -20,10 +21,8 @@ public:
     }
 
     core::Result<void> process_pending(
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t& next_identity) {
-        return derived().process_pending_impl(blocks, types, next_identity);
+        CommandContext& ctx) {
+        return derived().process_pending_impl(ctx);
     }
 
     void cancel(CommandId id) {
@@ -41,7 +40,7 @@ public:
     size_t rejected_count() const { return derived().rejected_count_impl(); }
     size_t skipped_count() const { return derived().skipped_count_impl(); }
 
-    const core::flat_vector<Command, 1>& history() const { return derived().history_impl(); }
+    const core::flat_vector<Command>& history() const { return derived().history_impl(); }
     void clear_history() { derived().clear_history_impl(); }
 
 protected:
@@ -51,15 +50,13 @@ protected:
     /// Returns false if the command was cancelled and should be skipped.
     bool process_command(
         Command& command,
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t& next_identity,
-        core::flat_vector<CommandId, 4>& cancelled,
+        core::flat_vector<CommandId>& cancelled,
         core::flat_vector<RejectedCommand, 4>& rejected_details,
-        core::flat_vector<Command, 1>& history,
+        core::flat_vector<Command>& history,
         size_t& executed,
         size_t& rejected,
-        size_t& skipped)
+        size_t& skipped,
+        CommandContext& ctx)
     {
         for (size_t i = 0; i < cancelled.size(); ++i) {
             if (cancelled[i] == command.id()) {
@@ -69,14 +66,14 @@ protected:
             }
         }
 
-        auto validation = detail::validate_command(command, blocks, types);
+        auto validation = detail::validate_command(command, ctx.blocks, ctx.types);
         if (!validation) {
             rejected++;
             rejected_details.push_back({command.id(), validation.error()});
             return false;
         }
 
-        auto execution = detail::execute_command(command, blocks, types, next_identity);
+        auto execution = detail::execute_command(command, ctx);
         if (!execution) {
             rejected++;
             rejected_details.push_back({command.id(), execution.error()});

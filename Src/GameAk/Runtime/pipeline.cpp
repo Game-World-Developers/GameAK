@@ -7,22 +7,22 @@ namespace gameak::runtime {
 
 StageId Pipeline::add_stage(std::string name, Controller controller) {
     StageId id = next_id_++;
-    stages_.push_back({id, std::move(name), std::move(controller)});
+    stages_->push_back({id, std::move(name), std::move(controller)});
     return id;
 }
 
 void Pipeline::remove_stage(StageId id) {
-    auto it = std::remove_if(stages_.begin(), stages_.end(),
+    auto it = std::remove_if(stages_->begin(), stages_->end(),
         [id](const Stage& s) { return s.id == id; });
-    stages_.erase(it, stages_.end());
+    stages_->erase(it, stages_->end());
 }
 
 void Pipeline::clear_stages() {
-    stages_.clear();
+    stages_->clear();
 }
 
 size_t Pipeline::stage_count() const {
-    return stages_.size();
+    return stages_->size();
 }
 
 core::flat_vector<StageResult, 8> Pipeline::last_results() const {
@@ -30,7 +30,7 @@ core::flat_vector<StageResult, 8> Pipeline::last_results() const {
 }
 
 Controller Pipeline::build() {
-    auto stages = std::make_shared<core::flat_vector<Stage, 8>>(stages_);
+    auto stages = stages_;
     auto results = results_ptr_;
 
     return [stages, results](StateView& view, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "command.h"
+#include "command_context.h"
 #include "block_type.h"
 #include "data_block.h"
 #include "GameAk/Core/identity.h"
@@ -21,9 +22,7 @@ public:
         const core::rb_tree<uint32_t, BlockTypeDescriptor>& types) = 0;
     virtual core::Result<void> execute(
         CommandPayload& payload,
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t& next_identity) = 0;
+        CommandContext& ctx) = 0;
 };
 
 } // namespace gameak::runtime::detail

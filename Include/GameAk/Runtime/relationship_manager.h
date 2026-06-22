@@ -21,11 +21,11 @@ public:
                               const core::rb_tree<core::Identity, DataBlock>* blocks = nullptr);
     core::Result<void> unrelate(core::Identity parent, core::Identity child);
 
-    core::flat_vector<core::Identity, 4> children_of(core::Identity parent) const;
-    core::flat_vector<core::Identity, 4> parents_of(core::Identity child) const;
+    core::flat_vector<core::Identity> children_of(core::Identity parent) const;
+    core::flat_vector<core::Identity> parents_of(core::Identity child) const;
 
     // Exposed for save/load
-    using RelMap = core::rb_tree<core::Identity, core::flat_vector<core::Identity, 4>>;
+    using RelMap = core::rb_tree<core::Identity, core::flat_vector<core::Identity>>;
     const RelMap& parent_to_children() const { return parent_to_children_; }
     RelMap& mut_parent_to_children() { return parent_to_children_; }
 
@@ -102,7 +102,7 @@ inline core::Result<void> RelationshipManager::unrelate(core::Identity parent, c
     return {};
 }
 
-inline core::flat_vector<core::Identity, 4> RelationshipManager::children_of(core::Identity parent) const {
+inline core::flat_vector<core::Identity> RelationshipManager::children_of(core::Identity parent) const {
     auto it = parent_to_children_.find(parent);
     if (it != parent_to_children_.end()) {
         return it->second;
@@ -110,7 +110,7 @@ inline core::flat_vector<core::Identity, 4> RelationshipManager::children_of(cor
     return {};
 }
 
-inline core::flat_vector<core::Identity, 4> RelationshipManager::parents_of(core::Identity child) const {
+inline core::flat_vector<core::Identity> RelationshipManager::parents_of(core::Identity child) const {
     auto it = child_to_parents_.find(child);
     if (it != child_to_parents_.end()) {
         return it->second;

@@ -11,9 +11,7 @@ public:
 private:
     void enqueue_impl(Command command);
     core::Result<void> process_pending_impl(
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t& next_identity);
+        CommandContext& ctx);
 
     void reset_counts_impl() {
         executed_ = 0;
@@ -32,13 +30,13 @@ private:
     size_t rejected_count_impl() const { return rejected_; }
     size_t skipped_count_impl() const { return skipped_; }
 
-    const core::flat_vector<Command, 1>& history_impl() const { return history_; }
+    const core::flat_vector<Command>& history_impl() const { return history_; }
     void clear_history_impl() { history_.clear(); }
 
     core::flat_vector<Command, 4> pending_;
-    core::flat_vector<CommandId, 4> cancelled_;
+    core::flat_vector<CommandId> cancelled_;
     core::flat_vector<RejectedCommand, 4> rejected_details_;
-    core::flat_vector<Command, 1> history_;
+    core::flat_vector<Command> history_;
     size_t executed_{0};
     size_t rejected_{0};
     size_t skipped_{0};

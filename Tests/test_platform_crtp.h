@@ -60,5 +60,17 @@ describe("Platform CRTP", {
         cpu.memcopy(dst, src, 4);
         expect(cpu.called).toBeTruthy();
     });
+
+    it("GenericCpu cache_line_size returns default", {
+        GenericCpu cpu;
+        expect(cpu.cache_line_size() > 0).toBeTruthy();
+        expect(cpu.cache_line_size() == 64).toBeTruthy();
+    });
+
+    it("Platform singleton cache_line_size matches detection", {
+        auto& p = Platform::instance();
+        auto info = detect_platform();
+        expect(p.cache_line_size() == info.cache_line_size).toBeTruthy();
+    });
 });
 }

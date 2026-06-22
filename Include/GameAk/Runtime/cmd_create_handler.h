@@ -21,18 +21,20 @@ class CreateBlockHandler : public ICommandHandler {
 
     core::Result<void> execute(
         CommandPayload& payload,
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t& next_identity) override
+        CommandContext& ctx) override
     {
         auto& p = std::get<CommandCreateBlock>(payload);
-        auto it = types.find(p.type_id);
-        if (it == types.end()) {
+        auto it = ctx.types.find(p.type_id);
+        if (it == ctx.types.end()) {
             return core::Error{core::ErrorCode::TypeNotRegistered};
         }
         auto& desc = it->second;
-        core::Identity id{++next_identity};
-        blocks.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+        core::Identity id{++ctx.next_identity};
+        ctx.blocks.insert(id, DataBlock{id, desc.type_id, desc.size, desc.alignment});
+        ctx.identity_types.insert(id, p.type_id);
+        auto tc = ctx.type_counts.find(p.type_id);
+        if (tc != ctx.type_counts.end()) tc->second++;
+        else ctx.type_counts.insert(p.type_id, 1);
         return {};
     }
 };

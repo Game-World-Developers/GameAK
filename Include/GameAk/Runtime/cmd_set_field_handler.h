@@ -32,14 +32,12 @@ class SetFieldHandler : public ICommandHandler {
 
     core::Result<void> execute(
         CommandPayload& payload,
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>&,
-        uint64_t&) override
+        CommandContext& ctx) override
     {
         auto& p = std::get<CommandSetField>(payload);
         for (auto target : p.targets) {
-            auto it = blocks.find(target);
-            if (it == blocks.end()) continue;
+            auto it = ctx.blocks.find(target);
+            if (it == ctx.blocks.end()) continue;
             std::memcpy(static_cast<std::byte*>(it->second.data()) + p.offset,
                         p.data.data(), p.data.size());
         }

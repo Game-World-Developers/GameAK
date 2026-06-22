@@ -80,23 +80,30 @@ public:
 
     Controller build() {
         auto table = std::make_shared<TransitionTable>(std::move(table_));
-        auto state = state_;
+
+        // The controller gets its own state, decoupled from the builder.
+        // Events must be enqueued before build().
+        auto ctrl_state = std::make_shared<InternalState>();
+        ctrl_state->current_state = std::move(state_->current_state);
+        ctrl_state->event_queue = std::move(state_->event_queue);
+
+        // Reset builder state so build() is idempotent and builder no longer
+        // shares mutable state with the controller.
+        state_ = std::make_shared<InternalState>();
 
         StateT initial = initial_state_;
         if (!has_initial_ && !table->states.empty()) {
             initial = table->states.begin()->first;
         }
         table->states.insert(initial, true);
-        state->current_state = initial;
+        ctrl_state->current_state = initial;
 
-        // Note: table_ was moved into shared_ptr; build() is idempotent
+        return [table, ctrl_state](StateView& view, CommandProducer& producer,
+                                    EphemeralProducer& ephem) -> core::Result<void> {
 
-        return [table, state](StateView& view, CommandProducer& producer,
-                               EphemeralProducer& ephem) -> core::Result<void> {
+            for (auto& event : ctrl_state->event_queue) {
 
-            for (auto& event : state->event_queue) {
-
-                auto trans_it = table->transitions.find(state->current_state);
+                auto trans_it = table->transitions.find(ctrl_state->current_state);
                 if (trans_it == table->transitions.end()) continue;
 
                 auto event_it = trans_it->second.find(event);
@@ -104,19 +111,19 @@ public:
 
                 StateT next_state = event_it->second;
 
-                auto exit_it = table->exit_actions.find(state->current_state);
+                auto exit_it = table->exit_actions.find(ctrl_state->current_state);
                 if (exit_it != table->exit_actions.end()) {
                     exit_it->second(view, producer, ephem);
                 }
 
-                state->current_state = std::move(next_state);
+                ctrl_state->current_state = std::move(next_state);
 
-                auto entry_it = table->entry_actions.find(state->current_state);
+                auto entry_it = table->entry_actions.find(ctrl_state->current_state);
                 if (entry_it != table->entry_actions.end()) {
                     entry_it->second(view, producer, ephem);
                 }
             }
-            state->event_queue.clear();
+            ctrl_state->event_queue.clear();
 
             return {};
         };

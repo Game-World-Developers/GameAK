@@ -26,13 +26,17 @@ class DestroyBlockHandler : public ICommandHandler {
 
     core::Result<void> execute(
         CommandPayload& payload,
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>&,
-        uint64_t&) override
+        CommandContext& ctx) override
     {
         auto& p = std::get<CommandDestroyBlock>(payload);
         for (auto target : p.targets) {
-            blocks.erase(target);
+            auto bit = ctx.blocks.find(target);
+            if (bit == ctx.blocks.end()) continue;
+            uint32_t tid = bit->second.type_id();
+            ctx.identity_types.erase(target);
+            ctx.blocks.erase(target);
+            auto tc = ctx.type_counts.find(tid);
+            if (tc != ctx.type_counts.end() && tc->second > 0) tc->second--;
         }
         return {};
     }

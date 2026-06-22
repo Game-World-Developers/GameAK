@@ -1,6 +1,7 @@
 #pragma once
 
 #include "i_command_handler.h"
+#include "layout_manager.h"
 
 namespace gameak::runtime::detail {
 
@@ -21,29 +22,45 @@ class ConvertLayoutHandler : public ICommandHandler {
 
     core::Result<void> execute(
         CommandPayload& payload,
-        core::rb_tree<core::Identity, DataBlock>&,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t&) override
+        CommandContext& ctx) override
     {
         auto& p = std::get<CommandConvertLayout>(payload);
-        auto it = types.find(p.type_id);
-        if (it == types.end()) {
+        auto it = ctx.types.find(p.type_id);
+        if (it == ctx.types.end()) {
             return core::Error{core::ErrorCode::TypeNotRegistered};
         }
         auto& desc = it->second;
 
         if (desc.layout == p.new_layout) return {};
 
-        if (p.new_layout == LayoutStrategy::AoS) {
-            if (desc.layout == LayoutStrategy::SoA) {
-                desc.layout = LayoutStrategy::AoS;
-            } else if (desc.layout == LayoutStrategy::AoSoA) {
-                desc.layout = LayoutStrategy::AoS;
-            }
-            return {};
+        if (!ctx.layout_mgr) {
+            return core::Error{core::ErrorCode::InternalError, "LayoutManager not available"};
         }
 
-        desc.layout = p.new_layout;
+        if (p.new_layout == LayoutStrategy::SoA) {
+            ctx.layout_mgr->convert_to_soa(p.type_id, ctx.blocks, ctx.types);
+        } else if (p.new_layout == LayoutStrategy::AoSoA) {
+            auto& config = p.aosoa_config;
+            if (config.chunk_size > 0) {
+                desc.aosoa_config = config;
+            }
+            ctx.layout_mgr->convert_to_aosoa(p.type_id, ctx.blocks, ctx.types);
+        } else if (p.new_layout == LayoutStrategy::Archetype) {
+            auto& config = p.archetype_config;
+            if (config.chunk_size > 0) {
+                desc.archetype_config = config;
+            }
+            ctx.layout_mgr->convert_to_archetype(p.type_id, ctx.blocks, ctx.types);
+        } else if (p.new_layout == LayoutStrategy::AoS) {
+            if (desc.layout == LayoutStrategy::SoA) {
+                ctx.layout_mgr->convert_from_soa(p.type_id, ctx.blocks, ctx.types);
+            } else if (desc.layout == LayoutStrategy::AoSoA) {
+                ctx.layout_mgr->convert_from_aosoa(p.type_id, ctx.blocks, ctx.types);
+            } else if (desc.layout == LayoutStrategy::Archetype) {
+                ctx.layout_mgr->convert_from_archetype(p.type_id, ctx.blocks, ctx.types);
+            }
+        }
+
         return {};
     }
 };

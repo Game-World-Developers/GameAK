@@ -4,9 +4,7 @@
 namespace gameak::runtime {
 
 core::Result<void> PriorityScheduler::process_pending_impl(
-    core::rb_tree<core::Identity, DataBlock>& blocks,
-    core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-    uint64_t& next_identity) {
+    CommandContext& ctx) {
 
     // Sort by priority (higher = first)
     std::sort(pending_.begin(), pending_.end(),
@@ -17,9 +15,8 @@ core::Result<void> PriorityScheduler::process_pending_impl(
         });
 
     for (auto& command : pending_) {
-        process_command(command, blocks, types, next_identity,
-                        cancelled_, rejected_details_, history_,
-                        executed_, rejected_, skipped_);
+        process_command(command, cancelled_, rejected_details_, history_,
+                        executed_, rejected_, skipped_, ctx);
     }
 
     pending_.clear();

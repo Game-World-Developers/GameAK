@@ -16,6 +16,9 @@ public:
     DataBlock(core::Identity identity, uint32_t type_id, size_t size, size_t /*alignment*/)
         : identity_{identity}, type_id_{type_id} { data_.resize(size); }
 
+    DataBlock(core::Identity identity, uint32_t type_id, core::flat_vector<std::byte>&& buf)
+        : identity_{identity}, type_id_{type_id}, data_{std::move(buf)} {}
+
     core::Identity identity() const { return identity_; }
     uint32_t type_id() const { return type_id_; }
     size_t size() const { return data_.size(); }
@@ -44,10 +47,12 @@ public:
 
     void resize(size_t new_size) { data_.resize(new_size); }
 
+    core::flat_vector<std::byte> release_buffer() { return std::move(data_); }
+
 private:
     core::Identity identity_;
     uint32_t type_id_;
-    core::flat_vector<std::byte, 1> data_;
+    core::flat_vector<std::byte> data_;
 };
 
 } // namespace gameak::runtime

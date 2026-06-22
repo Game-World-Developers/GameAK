@@ -58,6 +58,10 @@ struct CpuPlatform {
     void memzero(void* dst, size_t n) {
         static_cast<Derived*>(this)->memzero_impl(dst, n);
     }
+
+    size_t cache_line_size() const {
+        return static_cast<const Derived*>(this)->cache_line_size_impl();
+    }
 };
 
 struct GenericCpu : CpuPlatform<GenericCpu> {
@@ -67,6 +71,10 @@ struct GenericCpu : CpuPlatform<GenericCpu> {
 
     void memzero_impl(void* dst, size_t n) {
         std::memset(dst, 0, n);
+    }
+
+    size_t cache_line_size_impl() const {
+        return 64;
     }
 };
 
@@ -81,6 +89,8 @@ struct Platform {
     GenericCpu cpu;
 
     Platform() : info(detect_platform()) {}
+
+    size_t cache_line_size() const { return info.cache_line_size; }
 
     static Platform& instance() {
         static Platform p;

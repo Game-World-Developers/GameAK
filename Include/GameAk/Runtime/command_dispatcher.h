@@ -40,15 +40,13 @@ public:
 
     core::Result<void> execute(
         Command& command,
-        core::rb_tree<core::Identity, DataBlock>& blocks,
-        core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-        uint64_t& next_identity) const
+        CommandContext& ctx) const
     {
         auto it = handlers_.find(command.type());
         if (it == handlers_.end()) {
             return core::Error{core::ErrorCode::InternalError, "Unknown command type"};
         }
-        return it->second->execute(command.payload(), blocks, types, next_identity);
+        return it->second->execute(command.payload(), ctx);
     }
 
 private:
@@ -72,11 +70,9 @@ inline core::Result<void> validate_command(
 
 inline core::Result<void> execute_command(
     Command& command,
-    core::rb_tree<core::Identity, DataBlock>& blocks,
-    core::rb_tree<uint32_t, BlockTypeDescriptor>& types,
-    uint64_t& next_identity)
+    CommandContext& ctx)
 {
-    return get_dispatcher().execute(command, blocks, types, next_identity);
+    return get_dispatcher().execute(command, ctx);
 }
 
 } // namespace gameak::runtime::detail

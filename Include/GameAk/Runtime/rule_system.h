@@ -53,7 +53,7 @@ private:
         RuleDef def;
     };
 
-    core::flat_vector<RuleEntry, 8> rules_;
+    std::shared_ptr<core::flat_vector<RuleEntry, 8>> rules_{std::make_shared<core::flat_vector<RuleEntry, 8>>()};
     RuleId next_id_{1};
 };
 

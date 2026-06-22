@@ -47,7 +47,7 @@ private:
         Controller controller;
     };
 
-    core::flat_vector<Stage, 8> stages_;
+    std::shared_ptr<core::flat_vector<Stage, 8>> stages_{std::make_shared<core::flat_vector<Stage, 8>>()};
     StageId next_id_{1};
     std::shared_ptr<core::flat_vector<StageResult, 8>> results_ptr_{std::make_shared<core::flat_vector<StageResult, 8>>()};
 };

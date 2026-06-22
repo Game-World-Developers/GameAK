@@ -19,8 +19,10 @@
 #include "GameAk/Core/flat_vector.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <span>
 #include "GameAk/Core/logging.h"
 #include "GameAk/Core/rb_tree.h"
@@ -45,6 +47,7 @@ public:
     core::Result<void> register_block_type(BlockTypeDescriptor descriptor);
     core::Result<void> register_controller(Controller controller);
     core::Result<void> register_controller(Controller controller, int priority);
+    core::Result<void> register_controller(Controller controller, int priority, core::flat_vector<uint32_t, 4> type_access);
 
     core::Result<core::Identity> create_block(uint32_t type_id) {
         return block_mgr_.create(type_id, types_, next_identity_);
@@ -57,7 +60,7 @@ public:
     core::Result<void> cancel_command(CommandId id);
 
     core::Result<void> replay_command(const Command& command);
-    const core::flat_vector<Command, 1>& command_history() const { return scheduler_.history(); }
+    const core::flat_vector<Command>& command_history() const { return scheduler_.history(); }
 
     TickResult tick(float time_delta = kDefaultTimeDelta);
 
@@ -77,10 +80,10 @@ public:
         return block_mgr_.get_block(identity);
     }
 
-    core::flat_vector<core::Identity, 4> find_blocks_by_type(uint32_t type_id) const {
+    core::flat_vector<core::Identity> find_blocks_by_type(uint32_t type_id) const {
         return block_mgr_.find_by_type(type_id);
     }
-    core::flat_vector<core::Identity, 4> find_blocks(
+    core::flat_vector<core::Identity> find_blocks(
         std::function<bool(const DataBlock&)> pred) const {
         return block_mgr_.find(std::move(pred));
     }
@@ -104,7 +107,15 @@ public:
     EventId listen(EventType type, EventHandler handler) {
         return event_bus_.listen(type, std::move(handler));
     }
-    void unlisten(EventId id) { event_bus_.unlisten(id); }
+    void unlisten(EventId id) {
+        for (size_t i = 0; i < after_tick_handlers_.size(); ++i) {
+            if (after_tick_handlers_[i].first == id) {
+                after_tick_handlers_.erase(after_tick_handlers_.begin() + i);
+                return;
+            }
+        }
+        event_bus_.unlisten(id);
+    }
 
     EventId on_tick_begin(EventHandler handler) {
         return event_bus_.on_tick_begin(std::move(handler));
@@ -126,8 +137,9 @@ public:
     }
 
     EventId after_tick(std::function<void(const TickResult&)> handler) {
-        after_tick_handlers_.push_back(std::move(handler));
-        return ++next_after_tick_id_;
+        EventId id = ++next_after_tick_id_;
+        after_tick_handlers_.emplace_back(id, std::move(handler));
+        return id;
     }
 
     EventId when_block_created(std::function<void(core::Identity, uint32_t)> handler) {
@@ -141,11 +153,11 @@ public:
     }
 
     // ── Conversation-style query wrappers ───────────────────────────
-    core::flat_vector<core::Identity, 4> blocks_of_type(uint32_t type_id) const {
+    core::flat_vector<core::Identity> blocks_of_type(uint32_t type_id) const {
         return find_blocks_by_type(type_id);
     }
 
-    core::flat_vector<core::Identity, 4> blocks_where(
+    core::flat_vector<core::Identity> blocks_where(
         std::function<bool(const DataBlock&)> pred) const {
         return find_blocks(std::move(pred));
     }
@@ -353,10 +365,10 @@ public:
     UnrelateBuilder unrelate(core::Identity parent) {
         return UnrelateBuilder{this, parent};
     }
-    core::flat_vector<core::Identity, 4> children_of(core::Identity parent) const {
+    core::flat_vector<core::Identity> children_of(core::Identity parent) const {
         return rel_mgr_.children_of(parent);
     }
-    core::flat_vector<core::Identity, 4> parents_of(core::Identity child) const {
+    core::flat_vector<core::Identity> parents_of(core::Identity child) const {
         return rel_mgr_.parents_of(child);
     }
 
@@ -365,6 +377,8 @@ public:
     void convert_from_soa(uint32_t type_id) { layout_mgr_.convert_from_soa(type_id, block_mgr_.mut_blocks(), types_); }
     void convert_to_aosoa(uint32_t type_id)   { layout_mgr_.convert_to_aosoa(type_id, block_mgr_.mut_blocks(), types_); }
     void convert_from_aosoa(uint32_t type_id) { layout_mgr_.convert_from_aosoa(type_id, block_mgr_.mut_blocks(), types_); }
+    void convert_to_archetype(uint32_t type_id)   { layout_mgr_.convert_to_archetype(type_id, block_mgr_.mut_blocks(), types_); }
+    void convert_from_archetype(uint32_t type_id) { layout_mgr_.convert_from_archetype(type_id, block_mgr_.mut_blocks(), types_); }
 
     LayoutStrategy get_layout(uint32_t type_id) const {
         auto it = types_.find(type_id);
@@ -387,6 +401,16 @@ public:
         return layout_mgr_.aosoa_field_data(type_id, chunk_index, field_index);
     }
     size_t aosoa_field_count(uint32_t type_id) const { return layout_mgr_.aosoa_field_count(type_id); }
+
+    size_t archetype_block_count(uint32_t type_id)    const { return layout_mgr_.archetype_block_count(type_id); }
+    size_t archetype_chunk_count(uint32_t type_id)    const { return layout_mgr_.archetype_chunk_count(type_id); }
+    std::span<const core::Identity> archetype_chunk_identities(uint32_t type_id, size_t chunk_index) const {
+        return layout_mgr_.archetype_chunk_identities(type_id, chunk_index);
+    }
+    std::span<const std::byte> archetype_field_data(uint32_t type_id, size_t chunk_index, size_t field_index) const {
+        return layout_mgr_.archetype_field_data(type_id, chunk_index, field_index);
+    }
+    size_t archetype_field_count(uint32_t type_id) const { return layout_mgr_.archetype_field_count(type_id); }
 
     // ── Ephemeral API ──────────────────────────────────────────────
     core::Result<core::Identity> create_ephemeral_block(uint32_t type_id) {
@@ -440,7 +464,7 @@ private:
     core::rb_tree<std::string, uint32_t> type_name_to_id_;
     uint32_t next_block_type_id_{1};
 
-    core::flat_vector<std::function<void(const TickResult&)>, 4> after_tick_handlers_;
+    core::flat_vector<std::pair<EventId, std::function<void(const TickResult&)>>> after_tick_handlers_;
     uint64_t next_after_tick_id_{0};
 };
 
@@ -533,8 +557,21 @@ core::Result<void> Runtime<S>::register_controller(Controller controller, int pr
     if (!controller) {
         return core::Error{core::ErrorCode::InvalidOperation, "Controller is empty"};
     }
-    this->controllers_.push_back(ControllerEntry{std::move(controller), priority});
+    this->controllers_.push_back(ControllerEntry{std::move(controller), priority, {}});
     SPDLOG_DEBUG("Registered controller with priority {} (total={})", priority, this->controllers_.size());
+    return {};
+}
+
+template <typename S>
+core::Result<void> Runtime<S>::register_controller(Controller controller, int priority, core::flat_vector<uint32_t, 4> type_access) {
+    if (!controller) {
+        return core::Error{core::ErrorCode::InvalidOperation, "Controller is empty"};
+    }
+    size_t n = type_access.size();
+    this->controllers_.push_back(ControllerEntry{std::move(controller), priority, std::move(type_access)});
+    (void)n;
+    SPDLOG_DEBUG("Registered controller with priority {} and {} type access(es) (total={})",
+                 priority, n, this->controllers_.size());
     return {};
 }
 
@@ -615,28 +652,112 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
             return a.priority > b.priority;
         });
 
-    size_t controller_count = 0;
-    for (auto& entry : this->controllers_) {
-        StateView state_view{this->block_mgr_.ref_blocks(), this->types_,
-                             this->layout_mgr_, this->block_mgr_.identity_types(),
-                             time_delta};
-        CommandProducer producer{
-            [this](Command cmd) -> core::Result<CommandId> {
-                return this->submit_command(std::move(cmd));
+    // ── Parallel Group Formation ──────────────────────────────────
+    // Build groups of controllers with pairwise-disjoint type access.
+    // Controllers in the same group may execute concurrently.
+    // Groups themselves always execute sequentially.
+    struct Group {
+        core::flat_vector<size_t, 4> indices;
+        core::flat_vector<uint32_t, 8> types;
+    };
+    core::flat_vector<Group, 4> groups;
+    for (size_t i = 0; i < this->controllers_.size(); ++i) {
+        auto& entry = this->controllers_[i];
+        bool placed = false;
+        for (auto& g : groups) {
+            bool overlap = false;
+            for (auto t : entry.type_access) {
+                for (auto gt : g.types) {
+                    if (t == gt) { overlap = true; break; }
+                }
+                if (overlap) break;
             }
-        };
-        EphemeralProducer ephem_producer{
-            [this](uint32_t type_id) -> core::Result<core::Identity> {
-                return this->create_ephemeral_block(type_id);
+            if (!overlap) {
+                g.indices.push_back(i);
+                for (auto t : entry.type_access) {
+                    g.types.push_back(t);
+                }
+                placed = true;
+                break;
             }
-        };
-        auto cr = entry.controller(state_view, producer, ephem_producer);
-        if (!cr) {
-            SPDLOG_WARN("Controller failed: {}", cr.error().message());
-            result.status = ExecutionStatus::PartialFailure;
         }
-        controller_count++;
+        if (!placed) {
+            Group g;
+            g.indices.push_back(i);
+            for (auto t : entry.type_access) {
+                g.types.push_back(t);
+            }
+            groups.push_back(std::move(g));
+        }
     }
+
+    size_t controller_count = 0;
+
+    // Execute groups sequentially
+    for (auto& group : groups) {
+        // Helper to execute a single controller
+        auto exec_one = [&](size_t idx) {
+            auto& entry = this->controllers_[idx];
+            StateView state_view{this->block_mgr_.ref_blocks(), this->types_,
+                                 this->layout_mgr_, this->block_mgr_.identity_types(),
+                                 time_delta};
+            CommandProducer producer{
+                [this](Command cmd) -> core::Result<CommandId> {
+                    return this->submit_command(std::move(cmd));
+                }
+            };
+            EphemeralProducer ephem_producer{
+                [this](uint32_t type_id) -> core::Result<core::Identity> {
+                    return this->create_ephemeral_block(type_id);
+                }
+            };
+            auto cr = entry.controller(state_view, producer, ephem_producer);
+            if (!cr) {
+                SPDLOG_WARN("Controller failed: {}", cr.error().message());
+                result.status = ExecutionStatus::PartialFailure;
+            }
+            ++controller_count;
+        };
+
+        if (this->config_.parallel_executor && group.indices.size() > 1) {
+            // Parallel dispatch within this group
+            std::mutex mtx;
+            std::atomic<size_t> pcount{0};
+            core::flat_vector<std::function<void()>, 4> tasks;
+            for (auto idx : group.indices) {
+                tasks.push_back([this, idx, time_delta, &result, &mtx, &pcount]() {
+                    auto& entry = this->controllers_[idx];
+                    StateView state_view{this->block_mgr_.ref_blocks(), this->types_,
+                                         this->layout_mgr_, this->block_mgr_.identity_types(),
+                                         time_delta};
+                    CommandProducer producer{
+                        [this](Command cmd) -> core::Result<CommandId> {
+                            return this->submit_command(std::move(cmd));
+                        }
+                    };
+                    EphemeralProducer ephem_producer{
+                        [this](uint32_t type_id) -> core::Result<core::Identity> {
+                            return this->create_ephemeral_block(type_id);
+                        }
+                    };
+                    auto cr = entry.controller(state_view, producer, ephem_producer);
+                    if (!cr) {
+                        std::lock_guard<std::mutex> lk(mtx);
+                        result.status = ExecutionStatus::PartialFailure;
+                    }
+                    pcount.fetch_add(1, std::memory_order_relaxed);
+                });
+            }
+            this->config_.parallel_executor(std::span<const ParallelTask>(tasks.data(), tasks.size()));
+            controller_count += pcount.load();
+        } else {
+            // Sequential execution within this group
+            for (auto idx : group.indices) {
+                exec_one(idx);
+            }
+        }
+    }
+
     result.controllers_executed = controller_count;
 
     // Command Processing Phase
@@ -651,8 +772,15 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
         }
     }
 
-    auto process_result = this->scheduler_.process_pending(
-        this->block_mgr_.mut_blocks(), this->types_, this->next_identity_);
+    CommandContext cmd_ctx{
+        .blocks         = this->block_mgr_.mut_blocks(),
+        .types          = this->types_,
+        .next_identity  = this->next_identity_,
+        .identity_types = this->block_mgr_.mut_identity_types(),
+        .type_counts    = this->block_mgr_.mut_type_counts(),
+        .layout_mgr     = &this->layout_mgr_,
+    };
+    auto process_result = this->scheduler_.process_pending(cmd_ctx);
 
     // Fire block events by diffing before/after state
     if (track_blocks) {
@@ -688,7 +816,8 @@ TickResult Runtime<S>::execute_single_tick(float time_delta) {
     this->destroy_all_ephemeral();
 
     // Fire after_tick callbacks with the TickResult
-    for (auto& handler : this->after_tick_handlers_) {
+    for (auto& [id, handler] : this->after_tick_handlers_) {
+        (void)id;
         handler(result);
     }
 

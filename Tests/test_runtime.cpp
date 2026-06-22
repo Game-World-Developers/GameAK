@@ -62,7 +62,11 @@
 #include "test_dsl_relationships.h"
 #include "test_dsl_callbacks.h"
 #include "test_field_access.h"
+#include "test_parallel.h"
 #include "test_platform_crtp.h"
+#include "test_pool.h"
+#include "test_archetype.h"
+#include "test_bulk_iteration.h"
 
 using namespace gameak::core;
 using namespace gameak::runtime;
@@ -894,6 +898,12 @@ describe("Platform", {
         auto s = info.to_string();
         expect(s.find("Clang") != std::string::npos || s.find("GCC") != std::string::npos).toBeTruthy();
     });
+
+    it("detects cache_line_size", {
+        auto info = detect_platform();
+        expect(info.cache_line_size > 0).toBeTruthy();
+        expect(info.cache_line_size % 16 == 0).toBeTruthy();
+    });
 });
 }
 
@@ -953,5 +963,9 @@ int main(int argc, char* argv[]) {
     run_dsl_callback_tests();
     run_field_access_tests();
     run_platform_crtp_tests();
+    run_pool_tests();
+    run_archetype_tests();
+    run_bulk_iteration_tests();
+    run_parallel_tests();
     return cest_result();
 }

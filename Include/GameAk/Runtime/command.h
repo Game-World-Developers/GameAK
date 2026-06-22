@@ -35,17 +35,17 @@ struct CommandCreateBlock {
 };
 
 struct CommandDestroyBlock {
-    core::flat_vector<core::Identity, 4> targets;
+    core::flat_vector<core::Identity> targets;
 };
 
 struct CommandSetField {
-    core::flat_vector<core::Identity, 4> targets;
+    core::flat_vector<core::Identity> targets;
     size_t offset;
     core::flat_vector<std::byte, 8> data;
 };
 
 struct CommandResizeBlock {
-    core::flat_vector<core::Identity, 4> targets;
+    core::flat_vector<core::Identity> targets;
     size_t new_size;
 };
 
@@ -53,6 +53,7 @@ struct CommandConvertLayout {
     uint32_t type_id;
     LayoutStrategy new_layout;
     AoSoAConfig aosoa_config{};
+    ArchetypeConfig archetype_config{};
 };
 
 using CommandPayload = std::variant<CommandCreateBlock, CommandDestroyBlock,
@@ -80,7 +81,7 @@ public:
         return Command{CommandPayload{CommandDestroyBlock{{target}}}};
     }
 
-    static Command destroy_blocks(core::flat_vector<core::Identity, 4> targets) {
+    static Command destroy_blocks(core::flat_vector<core::Identity> targets) {
         return Command{CommandPayload{CommandDestroyBlock{std::move(targets)}}};
     }
 
@@ -88,7 +89,7 @@ public:
         return Command{CommandPayload{CommandResizeBlock{{target}, new_size}}};
     }
 
-    static Command resize_blocks(core::flat_vector<core::Identity, 4> targets, size_t new_size) {
+    static Command resize_blocks(core::flat_vector<core::Identity> targets, size_t new_size) {
         return Command{CommandPayload{CommandResizeBlock{std::move(targets), new_size}}};
     }
 

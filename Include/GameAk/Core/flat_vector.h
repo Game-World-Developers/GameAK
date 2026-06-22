@@ -1,5 +1,7 @@
 #pragma once
 
+#include "inline_policy.h"
+
 #include <algorithm>
 #include <cstddef>
 #include <cstring>
@@ -10,7 +12,7 @@
 
 namespace gameak::core {
 
-template <typename T, size_t InlineN = 8>
+template <typename T, size_t InlineN = inline_policy::default_inline_n<T>::value>
 class flat_vector {
     static_assert(InlineN > 0, "InlineN must be at least 1");
 

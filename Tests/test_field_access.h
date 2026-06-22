@@ -222,9 +222,12 @@ describe("FieldAccess", {
         int read_z = 0;
 
         auto checker_aos = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
-            read_x = view.field(id.value(), &TestVec::x);
-            read_y = view.field(id.value(), &TestVec::y);
-            read_z = view.field(id.value(), &TestVec::z);
+            auto fx = view.field(id.value(), &TestVec::x);
+            auto fy = view.field(id.value(), &TestVec::y);
+            auto fz = view.field(id.value(), &TestVec::z);
+            if (fx) read_x = *fx;
+            if (fy) read_y = *fy;
+            if (fz) read_z = *fz;
             return {};
         };
         expect(rt.register_controller(std::move(checker_aos)).has_value()).toBeTruthy();
@@ -238,9 +241,12 @@ describe("FieldAccess", {
         int read_y2 = 0;
         int read_z2 = 0;
         auto checker_soa = [&](StateView& view, CommandProducer&, EphemeralProducer&) -> Result<void> {
-            read_x2 = view.field(id.value(), &TestVec::x);
-            read_y2 = view.field(id.value(), &TestVec::y);
-            read_z2 = view.field(id.value(), &TestVec::z);
+            auto fx = view.field(id.value(), &TestVec::x);
+            auto fy = view.field(id.value(), &TestVec::y);
+            auto fz = view.field(id.value(), &TestVec::z);
+            if (fx) read_x2 = *fx;
+            if (fy) read_y2 = *fy;
+            if (fz) read_z2 = *fz;
             return {};
         };
         expect(rt.register_controller(std::move(checker_soa)).has_value()).toBeTruthy();

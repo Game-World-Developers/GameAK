@@ -30,6 +30,7 @@ struct BlockTypeDescriptor {
     std::string name;
     LayoutStrategy layout{LayoutStrategy::AoS};
     AoSoAConfig aosoa_config{};
+    ArchetypeConfig archetype_config{};
     core::flat_vector<FieldDescriptor, 8> fields;
     core::rb_tree<std::string, size_t> field_index;  // field name → index in fields[]
     core::rb_tree<size_t, size_t> offset_index;     // field offset → index in fields[]

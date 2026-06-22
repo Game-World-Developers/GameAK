@@ -7,7 +7,7 @@ namespace gameak::runtime {
 
 RuleId RuleSystem::add_rule(RuleDef rule) {
     RuleId id = next_id_++;
-    rules_.push_back({id, std::move(rule)});
+    rules_->push_back({id, std::move(rule)});
     return id;
 }
 
@@ -21,21 +21,21 @@ RuleId RuleSystem::add_rule(std::string name, RuleCondition condition, RuleActio
 }
 
 void RuleSystem::remove_rule(RuleId id) {
-    auto it = std::remove_if(rules_.begin(), rules_.end(),
+    auto it = std::remove_if(rules_->begin(), rules_->end(),
         [id](const RuleEntry& e) { return e.id == id; });
-    rules_.erase(it, rules_.end());
+    rules_->erase(it, rules_->end());
 }
 
 void RuleSystem::clear_rules() {
-    rules_.clear();
+    rules_->clear();
 }
 
 size_t RuleSystem::rule_count() const {
-    return rules_.size();
+    return rules_->size();
 }
 
 Controller RuleSystem::build() {
-    auto rules = std::make_shared<core::flat_vector<RuleEntry, 8>>(rules_);
+    auto rules = rules_;
 
     return [rules](StateView& view, CommandProducer& producer, EphemeralProducer& ephem) -> core::Result<void> {
         // Sort by priority descending (stable sort preserves registration order for equal priorities)

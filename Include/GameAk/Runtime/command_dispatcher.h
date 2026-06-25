@@ -23,7 +23,8 @@ public:
     }
 
     void register_handler(std::unique_ptr<ICommandHandler> handler) {
-        handlers_.insert(handler->type(), std::move(handler));
+        auto cmd_type = handler->type();
+        handlers_.insert(cmd_type, std::move(handler));
     }
 
     core::Result<void> validate(
